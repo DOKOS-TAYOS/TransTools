@@ -30,7 +30,6 @@ logs/
 
 # Output and generated data
 output/*
-!output/.gitkeep
 
 # IDE
 .idea/

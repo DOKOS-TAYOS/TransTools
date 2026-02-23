@@ -65,6 +65,7 @@ def show_history_dialog(parent) -> None:
         ttk.Label(dlg, text=t("history.no_data")).pack(padx=20, pady=20)
         ttk.Button(dlg, text=t("menu.close"), command=_on_close).pack(pady=10)
         dlg.transient(parent)
+        place_window_centered(dlg, width=400, height=150)
         return
 
     df["date"] = pd.to_datetime(df["date"])
@@ -137,4 +138,5 @@ def show_history_dialog(parent) -> None:
 
     ttk.Button(dlg, text=t("menu.close"), command=_on_close).pack(pady=8)
     dlg.transient(parent)
-    place_window_centered(dlg, preserve_size=True)
+    dlg.minsize(600, 450)
+    place_window_centered(dlg, width=800, height=550)

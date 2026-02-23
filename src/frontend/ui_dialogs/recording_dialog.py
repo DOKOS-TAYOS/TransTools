@@ -117,4 +117,4 @@ def show_recording_dialog(parent) -> None:
 
     dlg.protocol("WM_DELETE_WINDOW", _on_close)
     dlg.transient(parent)
-    place_window_centered(dlg, preserve_size=True)
+    place_window_centered(dlg, width=420, height=200)

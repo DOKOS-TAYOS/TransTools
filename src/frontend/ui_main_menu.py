@@ -6,6 +6,7 @@ from typing import Callable
 
 from config import UI_STYLE, __version__
 from config.theme import configure_ttk_styles, refresh_theme
+from frontend.window_utils import place_window_centered
 from i18n import t
 
 
@@ -88,6 +89,7 @@ def create_main_menu(
     main_frame.columnconfigure(0, weight=1)
     main_frame.columnconfigure(1, weight=1)
     main_frame.pack(fill="both", expand=True)
+    place_window_centered(menu)
     return menu
 
 
@@ -124,6 +126,7 @@ def show_exit_confirmation(parent_menu: Tk) -> None:
     no_btn.pack(side="right", padx=pad, pady=pad)
 
     exit_dlg.protocol("WM_DELETE_WINDOW", exit_dlg.destroy)
+    place_window_centered(exit_dlg)
     exit_dlg.transient(parent_menu)
     exit_dlg.grab_set()
     parent_menu.wait_window(exit_dlg)
