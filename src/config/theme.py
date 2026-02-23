@@ -97,7 +97,7 @@ def configure_ttk_styles(root) -> None:
     style.configure("TLabel", background=bg, foreground=fg, font=font)
 
     # Small.TLabel - smaller text (e.g. descriptions)
-    font_small = (UI_STYLE["font_family"], max(8, UI_STYLE["font_size"] - 2))
+    font_small = (UI_STYLE["font_family"], max(8, int(UI_STYLE["font_size"] * 0.65)))
     style.configure("Small.TLabel", background=bg, foreground=fg, font=font_small)
 
     # TButton - primary buttons
@@ -172,13 +172,27 @@ def configure_ttk_styles(root) -> None:
     except ttk.TclError:
         pass
 
-    # TCheckbutton - checkbox
+    # TCheckbutton - checkbox (indicatorsize = font_size for proportional look)
     style.configure(
         "TCheckbutton",
         background=bg,
         foreground=fg,
         font=font,
+        indicatorsize=UI_STYLE["font_size"],
     )
+
+    # TNotebook.Tab - larger tabs for config dialog
+    tab_pad_h = max(16, UI_STYLE["padding"] * 2)
+    tab_pad_v = max(8, UI_STYLE["padding"])
+    tab_bg = _adjust_hex_brightness(bg, 0.9)
+    style.configure(
+        "TNotebook.Tab",
+        background=tab_bg,
+        foreground=fg,
+        padding=(tab_pad_h, tab_pad_v),
+        font=font,
+    )
+    style.map("TNotebook.Tab", background=[("selected", bg)])
 
 
 # Initialize on import
