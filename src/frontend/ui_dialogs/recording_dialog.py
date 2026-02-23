@@ -79,8 +79,7 @@ def show_recording_dialog(parent) -> None:
                 pitch_min_hz=result.pitch_min_hz,
                 pitch_max_hz=result.pitch_max_hz,
                 energy_rms=result.energy_rms,
-                mood_score=result.mood_score,
-                audio_path=audio_path,
+                mood=result.mood,
             )
             result_var.set(
                 t(

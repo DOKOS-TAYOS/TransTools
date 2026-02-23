@@ -77,13 +77,15 @@ def show_history_dialog(parent) -> None:
     # Tab 1: Table view
     _col_keys = {
         "date": "history.date",
+        "sample": "history.sample",
         "pitch_mean_hz": "history.pitch_mean_hz",
         "pitch_std_hz": "history.col_pitch_std_hz",
         "pitch_min_hz": "history.col_pitch_min_hz",
         "pitch_max_hz": "history.col_pitch_max_hz",
         "energy_rms": "history.col_energy_rms",
-        "mood_score": "history.col_mood_score",
-        "audio_path": "history.col_audio_path",
+        "mood_happy": "history.mood_happy",
+        "mood_sad": "history.mood_sad",
+        "mood_angry": "history.mood_angry",
     }
     table_frame = ttk.Frame(notebook)
     cols = list(df.columns)

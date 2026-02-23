@@ -42,6 +42,8 @@ def create_main_menu(
     version_label = ttk.Label(main_frame, text=f"v{__version__}")
 
     btn_width = UI_STYLE["button_width_wide"]
+    btn_width_small = UI_STYLE["button_width"]
+
     rec_btn = ttk.Button(
         main_frame,
         text=t("menu.recording"),
@@ -64,25 +66,27 @@ def create_main_menu(
         main_frame,
         text=t("menu.config"),
         command=config_callback,
-        width=btn_width,
+        width=btn_width_small,
     )
     exit_btn = ttk.Button(
         main_frame,
         text=t("menu.exit"),
         command=lambda: show_exit_confirmation(menu),
         style="Danger.TButton",
-        width=btn_width,
+        width=btn_width_small,
     )
 
     pad = UI_STYLE["padding"]
-    welcome.grid(column=0, row=0, padx=pad, pady=pad)
-    version_label.grid(column=0, row=1, padx=pad, pady=(0, pad))
+    welcome.grid(column=0, row=0, columnspan=2, padx=pad, pady=pad)
+    version_label.grid(column=0, row=1, columnspan=2, padx=pad, pady=(0, pad))
     rec_btn.grid(column=0, row=2, padx=pad, pady=pad)
-    hist_btn.grid(column=0, row=3, padx=pad, pady=pad)
-    info_btn.grid(column=0, row=4, padx=pad, pady=pad)
-    config_btn.grid(column=0, row=5, padx=pad, pady=pad)
-    exit_btn.grid(column=0, row=6, padx=pad, pady=pad)
+    hist_btn.grid(column=1, row=2, padx=pad, pady=pad)
+    info_btn.grid(column=0, row=3, padx=pad, pady=pad)
+    config_btn.grid(column=0, row=4, padx=pad, pady=pad)
+    exit_btn.grid(column=1, row=4, padx=pad, pady=pad)
 
+    main_frame.columnconfigure(0, weight=1)
+    main_frame.columnconfigure(1, weight=1)
     main_frame.pack(fill="both", expand=True)
     return menu
 

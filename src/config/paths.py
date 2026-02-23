@@ -17,14 +17,13 @@ def get_output_dir() -> Path:
 
 
 def get_data_file_path() -> Path:
-    """Path to data file (CSV or XLSX).
+    """Path to data file (JSON).
 
     Returns:
-        Path to trans_tools_data.{csv|xlsx} in output dir.
+        Path to trans_tools_data.json in output dir.
     """
     out = get_output_dir()
-    fmt = get_env_from_schema("FILE_DATA_FORMAT")
-    return out / f"trans_tools_data.{fmt}"
+    return out / "trans_tools_data.json"
 
 
 def get_audio_dir() -> Path:

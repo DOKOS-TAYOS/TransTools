@@ -20,7 +20,7 @@ class VoiceAnalysisResult:
         pitch_min_hz: Minimum pitch in Hz.
         pitch_max_hz: Maximum pitch in Hz.
         energy_rms: RMS energy value.
-        mood_score: Placeholder ("N/A" or future value).
+        mood: [happy, sad, angry] scores (placeholder [0,0,0] until mood detection).
     """
 
     pitch_mean_hz: float
@@ -28,7 +28,7 @@ class VoiceAnalysisResult:
     pitch_min_hz: float
     pitch_max_hz: float
     energy_rms: float
-    mood_score: str  # Placeholder: "N/A" or future value
+    mood: list[float]  # [happy, sad, angry]
 
 
 def analyze_audio(
@@ -89,7 +89,7 @@ def analyze_audio(
             pitch_min_hz=pitch_min,
             pitch_max_hz=pitch_max,
             energy_rms=energy_rms,
-            mood_score="N/A",
+            mood=[0.0, 0.0, 0.0],  # Placeholder until mood detection
         )
     except Exception as e:
         logger.exception("Analysis failed: %s", e)
