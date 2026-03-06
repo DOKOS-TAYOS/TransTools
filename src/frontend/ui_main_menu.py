@@ -11,18 +11,26 @@ from i18n import t
 
 
 def create_main_menu(
-    recording_callback: Callable[[], None],
-    history_callback: Callable[[], None],
-    info_callback: Callable[[], None],
+    voice_study_callback: Callable[[], None],
+    medication_callback: Callable[[], None],
+    other_records_callback: Callable[[], None],
+    habits_callback: Callable[[], None],
+    contacts_callback: Callable[[], None],
+    app_info_callback: Callable[[], None],
+    view_data_callback: Callable[[], None],
     config_callback: Callable[[], None],
     exit_callback: Callable[[], None],
 ) -> Tk:
     """Create and display the main menu window.
 
     Args:
-        recording_callback: Called when user selects recording.
-        history_callback: Called when user selects history.
-        info_callback: Called when user selects info.
+        voice_study_callback: Called when user selects voice study.
+        medication_callback: Called when user selects medication register.
+        other_records_callback: Called when user selects other records.
+        habits_callback: Called when user selects habit checklist.
+        contacts_callback: Called when user selects support contacts.
+        app_info_callback: Called when user selects application info.
+        view_data_callback: Called when user selects unified data view.
         config_callback: Called when user selects config.
         exit_callback: Called when user selects exit.
 
@@ -45,22 +53,46 @@ def create_main_menu(
     btn_width = UI_STYLE["button_width_wide"]
     btn_width_small = UI_STYLE["button_width"]
 
-    rec_btn = ttk.Button(
+    voice_study_btn = ttk.Button(
         main_frame,
-        text=t("menu.recording"),
-        command=recording_callback,
+        text=t("menu.voice_record"),
+        command=voice_study_callback,
         width=btn_width,
     )
-    hist_btn = ttk.Button(
+    medication_btn = ttk.Button(
         main_frame,
-        text=t("menu.history"),
-        command=history_callback,
+        text=t("menu.medication_record"),
+        command=medication_callback,
         width=btn_width,
     )
-    info_btn = ttk.Button(
+    other_records_btn = ttk.Button(
         main_frame,
-        text=t("menu.info"),
-        command=info_callback,
+        text=t("menu.other_records"),
+        command=other_records_callback,
+        width=btn_width,
+    )
+    habits_btn = ttk.Button(
+        main_frame,
+        text=t("menu.habits"),
+        command=habits_callback,
+        width=btn_width,
+    )
+    contacts_btn = ttk.Button(
+        main_frame,
+        text=t("menu.info_contacts"),
+        command=contacts_callback,
+        width=btn_width,
+    )
+    app_info_btn = ttk.Button(
+        main_frame,
+        text=t("menu.app_info"),
+        command=app_info_callback,
+        width=btn_width,
+    )
+    view_data_btn = ttk.Button(
+        main_frame,
+        text=t("menu.view_data"),
+        command=view_data_callback,
         width=btn_width,
     )
     config_btn = ttk.Button(
@@ -72,7 +104,7 @@ def create_main_menu(
     exit_btn = ttk.Button(
         main_frame,
         text=t("menu.exit"),
-        command=lambda: show_exit_confirmation(menu),
+        command=exit_callback,
         style="Danger.TButton",
         width=btn_width_small,
     )
@@ -80,11 +112,15 @@ def create_main_menu(
     pad = UI_STYLE["padding"]
     welcome.grid(column=0, row=0, columnspan=2, padx=pad, pady=pad)
     version_label.grid(column=0, row=1, columnspan=2, padx=pad, pady=(0, pad))
-    rec_btn.grid(column=0, row=2, padx=pad, pady=pad)
-    hist_btn.grid(column=1, row=2, padx=pad, pady=pad)
-    info_btn.grid(column=0, row=3, padx=pad, pady=pad)
-    config_btn.grid(column=0, row=4, padx=pad, pady=pad)
-    exit_btn.grid(column=1, row=4, padx=pad, pady=pad)
+    voice_study_btn.grid(column=0, row=2, padx=pad, pady=pad)
+    medication_btn.grid(column=1, row=2, padx=pad, pady=pad)
+    other_records_btn.grid(column=0, row=3, padx=pad, pady=pad)
+    habits_btn.grid(column=1, row=3, padx=pad, pady=pad)
+    contacts_btn.grid(column=0, row=4, padx=pad, pady=pad)
+    app_info_btn.grid(column=1, row=4, padx=pad, pady=pad)
+    view_data_btn.grid(column=0, row=5, padx=pad, pady=pad)
+    config_btn.grid(column=0, row=6, padx=pad, pady=pad)
+    exit_btn.grid(column=1, row=6, padx=pad, pady=pad)
 
     main_frame.columnconfigure(0, weight=1)
     main_frame.columnconfigure(1, weight=1)
@@ -143,27 +179,43 @@ def _close_application(menu: Tk) -> None:
 
 
 def start_main_menu(
-    recording_callback: Callable[[], None],
-    history_callback: Callable[[], None],
-    info_callback: Callable[[], None],
+    voice_study_callback: Callable[[], None],
+    medication_callback: Callable[[], None],
+    other_records_callback: Callable[[], None],
+    habits_callback: Callable[[], None],
+    contacts_callback: Callable[[], None],
+    app_info_callback: Callable[[], None],
+    view_data_callback: Callable[[], None],
     config_callback: Callable[[], None],
+    startup_callback: Callable[[Tk], None] | None = None,
 ) -> None:
     """Create and run the main menu.
 
     Args:
-        recording_callback: Called when user selects recording.
-        history_callback: Called when user selects history.
-        info_callback: Called when user selects info.
+        voice_study_callback: Called when user selects voice study.
+        medication_callback: Called when user selects medication register.
+        other_records_callback: Called when user selects other records.
+        habits_callback: Called when user selects habits.
+        contacts_callback: Called when user selects contacts.
+        app_info_callback: Called when user selects application info.
+        view_data_callback: Called when user selects data view.
         config_callback: Called when user selects config.
+        startup_callback: Optional callback executed after menu creation.
     """
     menu = create_main_menu(
-        recording_callback=recording_callback,
-        history_callback=history_callback,
-        info_callback=info_callback,
+        voice_study_callback=voice_study_callback,
+        medication_callback=medication_callback,
+        other_records_callback=other_records_callback,
+        habits_callback=habits_callback,
+        contacts_callback=contacts_callback,
+        app_info_callback=app_info_callback,
+        view_data_callback=view_data_callback,
         config_callback=config_callback,
         exit_callback=lambda: show_exit_confirmation(menu),
     )
     import __main__
 
     __main__.menu = menu
+    if startup_callback:
+        startup_callback(menu)
     menu.mainloop()

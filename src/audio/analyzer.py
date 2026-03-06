@@ -20,7 +20,7 @@ class VoiceAnalysisResult:
         pitch_min_hz: Minimum pitch in Hz.
         pitch_max_hz: Maximum pitch in Hz.
         energy_rms: RMS energy value.
-        mood: [happy, sad, angry] scores (placeholder [0,0,0] until mood detection).
+        mood: [happy, sad, angry] scores in 0..1 range.
     """
 
     pitch_mean_hz: float
@@ -83,14 +83,57 @@ def analyze_audio(
         rms = librosa.feature.rms(y=audio)[0]
         energy_rms = float(np.mean(rms)) if len(rms) > 0 else 0.0
 
+        mood = _estimate_mood_heuristic(
+            pitch_std_hz=pitch_std,
+            pitch_min_hz=pitch_min,
+            pitch_max_hz=pitch_max,
+            energy_rms=energy_rms,
+        )
+
         return VoiceAnalysisResult(
             pitch_mean_hz=pitch_mean,
             pitch_std_hz=pitch_std,
             pitch_min_hz=pitch_min,
             pitch_max_hz=pitch_max,
             energy_rms=energy_rms,
-            mood=[0.0, 0.0, 0.0],  # Placeholder until mood detection
+            mood=mood,
         )
     except Exception as e:
         logger.exception("Analysis failed: %s", e)
         raise AnalysisError(f"Analysis failed: {e}") from e
+
+
+def _estimate_mood_heuristic(
+    pitch_std_hz: float,
+    pitch_min_hz: float,
+    pitch_max_hz: float,
+    energy_rms: float,
+) -> list[float]:
+    """Estimate mood scores heuristically from acoustic features.
+
+    This is a lightweight offline heuristic. It is not a medical model and should
+    only be used as supportive trend data.
+
+    Args:
+        pitch_std_hz: Pitch standard deviation.
+        pitch_min_hz: Minimum detected pitch.
+        pitch_max_hz: Maximum detected pitch.
+        energy_rms: RMS energy level.
+
+    Returns:
+        [happy, sad, angry] values normalized in 0..1.
+    """
+    energy_norm = max(0.0, min(1.0, energy_rms / 0.15))
+    variation = max(0.0, min(1.0, pitch_std_hz / 70.0))
+    spread = max(0.0, min(1.0, (pitch_max_hz - pitch_min_hz) / 260.0))
+
+    happy = 0.15 + (0.55 * energy_norm) + (0.30 * variation)
+    sad = 0.20 + (0.65 * (1.0 - energy_norm)) + (0.15 * (1.0 - variation))
+    angry = 0.10 + (0.60 * energy_norm) + (0.30 * spread)
+
+    values = [happy, sad, angry]
+    values = [max(0.0, min(1.0, value)) for value in values]
+    s = sum(values)
+    if s == 0:
+        return [0.0, 0.0, 0.0]
+    return [value / s for value in values]

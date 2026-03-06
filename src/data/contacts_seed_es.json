@@ -1,0 +1,64 @@
+{
+  "national": [
+    {
+      "organization": "FELGTBI+",
+      "description": "Federacion estatal de asociaciones LGTBI+",
+      "phone": "",
+      "email": "felgtbi@felgtbi.org",
+      "website": "https://felgtbi.org/"
+    },
+    {
+      "organization": "Fundacion Triangulo",
+      "description": "Apoyo social, juridico y comunitario LGTBI+",
+      "phone": "",
+      "email": "fundacion@fundaciontriangulo.org",
+      "website": "https://www.fundaciontriangulo.org/"
+    },
+    {
+      "organization": "Chrysallis",
+      "description": "Asociacion de familias de menores trans",
+      "phone": "",
+      "email": "info@chrysallis.org.es",
+      "website": "https://chrysallis.org.es/"
+    }
+  ],
+  "regional": {
+    "Andalucia": [
+      {
+        "organization": "ATA-Sylvia Rivera",
+        "description": "Asociacion trans andaluza de apoyo y acompanamiento",
+        "phone": "",
+        "email": "contacto@ata-sylviarivera.org",
+        "website": "https://ata-sylviarivera.org/"
+      }
+    ],
+    "Cataluna": [
+      {
+        "organization": "Transit",
+        "description": "Servicio de atencion sanitaria trans en Cataluna",
+        "phone": "",
+        "email": "",
+        "website": "https://catsalut.gencat.cat/ca/serveis-sanitaris/transit/"
+      }
+    ],
+    "Comunidad de Madrid": [
+      {
+        "organization": "COGAM",
+        "description": "Colectivo LGTB+ de Madrid con recursos y acompanamiento",
+        "phone": "",
+        "email": "cogam@cogam.es",
+        "website": "https://cogam.es/"
+      }
+    ],
+    "Comunitat Valenciana": [
+      {
+        "organization": "Lambda",
+        "description": "Colectivo LGTB+ de Valencia con atencion comunitaria",
+        "phone": "",
+        "email": "lambda@lambdavalencia.org",
+        "website": "https://lambdavalencia.org/"
+      }
+    ]
+  }
+}
+

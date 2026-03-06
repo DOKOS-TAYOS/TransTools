@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- New modular core services with versioned JSON state (`trans_tools_state.json`) and atomic persistence.
+- First-run onboarding wizard (3 steps) with optional health setup fields.
+- New main menu structure with dedicated modules:
+  - Voice log
+  - Medication log
+  - Other logs (visits + free events)
+  - Adaptive habit checklist
+  - Contacts/resources
+  - App information
+  - Unified data view
+  - Configuration
+- Voice privacy workflow:
+  - Local encryption for sensitive tone metrics.
+  - Weekly-only tone visibility policy in UI and exports.
+- Medication/visit reminders for due or overdue items at app startup.
+- Unified data view with calendar, daily non-sensitive summary, and weekly chart.
+- Export support for CSV, Excel, PDF, and PNG.
+- Linux scripts: `setup.sh`, `install.sh`, `bin/run.sh`.
+- Third-party license inventory (`THIRD_PARTY_LICENSES.md`).
+- Contacts seed dataset (`src/data/contacts_seed_es.json`).
+- New dependencies: `tkcalendar`, `reportlab`, `cryptography`.
+
+### Changed
+
+- Configuration dialog now also edits profile and health fields.
+- Voice analysis now computes heuristic mood scores from acoustic features.
+- README updated to reflect full v1 scope and offline-first behavior.
+
 ## [0.1.0] - 2026-02-23
 
 ### Added

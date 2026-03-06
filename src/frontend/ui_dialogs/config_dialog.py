@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from tkinter import BooleanVar, Canvas, IntVar, StringVar, Toplevel, messagebox, ttk
+from typing import Any
 
 from config import UI_STYLE, get_current_env_values, write_env_file
 from config.env import get_env_from_schema
@@ -37,11 +38,12 @@ def _add_param_row(
     return row + 2
 
 
-def show_config_dialog(parent) -> bool:
+def show_config_dialog(parent, app_service: Any | None = None) -> bool:
     """Show config dialog.
 
     Args:
         parent: Parent Tk window.
+        app_service: Optional AppService instance to persist profile/health data.
 
     Returns:
         True if user saved and app should restart, False otherwise.
@@ -91,6 +93,70 @@ def show_config_dialog(parent) -> bool:
     # --- General tab ---
     gen_frame = ttk.Frame(notebook, padding=UI_STYLE["padding"])
     row = 0
+
+    profile = app_service.get_profile() if app_service else {}
+    health = app_service.get_health_config() if app_service else {}
+
+    first_name_var = StringVar(value=profile.get("first_name", ""))
+    row = _add_param_row(
+        gen_frame,
+        row,
+        "config.profile.first_name",
+        "config.profile.first_name_desc",
+        ttk.Entry(gen_frame, textvariable=first_name_var, width=30, font=_font),
+    )
+
+    med_next_var = StringVar(value=health.get("next_medication_date") or "")
+    row = _add_param_row(
+        gen_frame,
+        row,
+        "config.profile.next_medication_date",
+        "config.profile.next_medication_date_desc",
+        ttk.Entry(gen_frame, textvariable=med_next_var, width=16, font=_font),
+    )
+
+    med_period_var = IntVar(value=health.get("medication_every_days") or 7)
+    row = _add_param_row(
+        gen_frame,
+        row,
+        "config.profile.medication_every_days",
+        "config.profile.medication_every_days_desc",
+        ttk.Spinbox(
+            gen_frame,
+            from_=1,
+            to=60,
+            textvariable=med_period_var,
+            width=8,
+            font=_font,
+        ),
+    )
+
+    med_dose_var = StringVar(value=health.get("medication_dose") or "")
+    row = _add_param_row(
+        gen_frame,
+        row,
+        "config.profile.medication_dose",
+        "config.profile.medication_dose_desc",
+        ttk.Entry(gen_frame, textvariable=med_dose_var, width=20, font=_font),
+    )
+
+    next_medical_var = StringVar(value=health.get("next_medical_visit_date") or "")
+    row = _add_param_row(
+        gen_frame,
+        row,
+        "config.profile.next_medical_visit_date",
+        "config.profile.next_medical_visit_date_desc",
+        ttk.Entry(gen_frame, textvariable=next_medical_var, width=16, font=_font),
+    )
+
+    next_psych_var = StringVar(value=health.get("next_psych_visit_date") or "")
+    row = _add_param_row(
+        gen_frame,
+        row,
+        "config.profile.next_psych_visit_date",
+        "config.profile.next_psych_visit_date_desc",
+        ttk.Entry(gen_frame, textvariable=next_psych_var, width=16, font=_font),
+    )
 
     lang_var = StringVar(value=get_env_from_schema("LANGUAGE"))
     row = _add_param_row(
@@ -337,6 +403,17 @@ def show_config_dialog(parent) -> bool:
 
         env_path = Path(__file__).resolve().parent.parent.parent.parent / ".env"
         write_env_file(env_path, values)
+
+        if app_service is not None:
+            app_service.update_profile_and_health(
+                first_name=first_name_var.get().strip(),
+                next_medication_date=med_next_var.get().strip() or None,
+                medication_every_days=med_period_var.get(),
+                medication_dose=med_dose_var.get().strip() or None,
+                next_medical_visit_date=next_medical_var.get().strip() or None,
+                next_psych_visit_date=next_psych_var.get().strip() or None,
+            )
+
         result["saved"] = True
         messagebox.showinfo(t("menu.config"), t("config.saved_message"))
         dlg.destroy()
