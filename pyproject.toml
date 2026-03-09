@@ -57,3 +57,7 @@ target-version = "py312"
 select = ["E", "F", "I", "N", "W"]
 ignore = []
 fixable = ["I"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = [".git", ".venv", "output", ".pytest_tmp", ".ruff_cache", ".pytest_cache"]

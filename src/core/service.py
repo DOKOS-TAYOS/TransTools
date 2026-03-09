@@ -10,18 +10,16 @@ from uuid import uuid4
 
 import pandas as pd
 
-from audio.analyzer import VoiceAnalysisResult
 from utils import DataStoreError, get_logger
 
 from .privacy import VoicePrivacyService
 from .repository import ISO_DATE, StateRepository
+from .types import VoiceAnalysisResult
 
 logger = get_logger(__name__)
 
-
-def _iso_today() -> str:
-    """Return today's date in ISO format."""
-    return date.today().isoformat()
+_MIN_HABITS = 3
+_MAX_HABITS = 8
 
 
 def _parse_iso_date(value: str | None) -> date | None:
@@ -287,22 +285,87 @@ class AppService:
         )
         self.repository.save(state)
 
-    def list_voice_records(self, include_sensitive: bool = False) -> list[dict[str, Any]]:
-        """List voice records sorted by date.
-
-        Args:
-            include_sensitive: Include decrypted tone values if True.
-
-        Returns:
-            Voice record list.
-        """
-        state = self.repository.load()
-        rows = sorted(
-            state["records"]["voice"],
-            key=lambda x: (x.get("target_date", ""), x.get("recorded_at", "")),
+    @staticmethod
+    def _sort_rows(
+        rows: list[dict[str, Any]],
+        date_key: str,
+        secondary_key: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Sort records by date and optional secondary key."""
+        if secondary_key is None:
+            return sorted(rows, key=lambda row: row.get(date_key, ""))
+        return sorted(
+            rows,
+            key=lambda row: (row.get(date_key, ""), row.get(secondary_key, "")),
         )
+
+    @staticmethod
+    def _group_rows_by_date(
+        rows: list[dict[str, Any]],
+        date_key: str,
+    ) -> dict[str, list[dict[str, Any]]]:
+        """Group rows by the provided date key."""
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for row in rows:
+            day_key = row.get(date_key)
+            if not day_key:
+                continue
+            grouped.setdefault(day_key, []).append(row)
+        return grouped
+
+    def _build_state_snapshot(self, state: dict[str, Any]) -> dict[str, Any]:
+        """Build sorted/indexed record snapshot from current state."""
+        records = state["records"]
+        voice = self._sort_rows(
+            records["voice"],
+            date_key="target_date",
+            secondary_key="recorded_at",
+        )
+        medication = self._sort_rows(records["medication"], date_key="date")
+        visits = self._sort_rows(records["visits"], date_key="date")
+        events = self._sort_rows(records["other_events"], date_key="date")
+        habits = self._sort_rows(records["habits"], date_key="date")
+
+        voice_by_date = self._group_rows_by_date(voice, "target_date")
+        medication_by_date = self._group_rows_by_date(medication, "date")
+        visits_by_date = self._group_rows_by_date(visits, "date")
+        events_by_date = self._group_rows_by_date(events, "date")
+        habits_by_date = self._group_rows_by_date(habits, "date")
+
+        all_dates = sorted(
+            key
+            for key in {
+                *voice_by_date.keys(),
+                *medication_by_date.keys(),
+                *visits_by_date.keys(),
+                *events_by_date.keys(),
+                *habits_by_date.keys(),
+            }
+            if _parse_iso_date(key) is not None
+        )
+
+        return {
+            "voice": voice,
+            "medication": medication,
+            "visits": visits,
+            "events": events,
+            "habits": habits,
+            "voice_by_date": voice_by_date,
+            "medication_by_date": medication_by_date,
+            "visits_by_date": visits_by_date,
+            "events_by_date": events_by_date,
+            "habits_by_date": habits_by_date,
+            "all_dates": all_dates,
+        }
+
+    def _hydrate_voice_rows(
+        self,
+        rows: list[dict[str, Any]],
+        include_sensitive: bool,
+    ) -> list[dict[str, Any]]:
+        """Optionally enrich voice rows with decrypted tone metrics."""
         if not include_sensitive:
-            return rows
+            return list(rows)
         hydrated: list[dict[str, Any]] = []
         for row in rows:
             enriched = dict(row)
@@ -310,13 +373,17 @@ class AppService:
             hydrated.append(enriched)
         return hydrated
 
-    def get_weekly_voice_summary(self) -> list[dict[str, Any]]:
-        """Build weekly aggregated voice metrics.
+    def list_voice_records(self, include_sensitive: bool = False) -> list[dict[str, Any]]:
+        """List voice records sorted by date."""
+        state = self.repository.load()
+        snapshot = self._build_state_snapshot(state)
+        return self._hydrate_voice_rows(snapshot["voice"], include_sensitive=include_sensitive)
 
-        Returns:
-            Weekly entries with aggregate tone and mood.
-        """
-        rows = self.list_voice_records(include_sensitive=True)
+    def _build_weekly_voice_summary(
+        self,
+        rows: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Build weekly aggregated voice metrics from hydrated voice rows."""
         buckets: dict[str, dict[str, Any]] = {}
         for row in rows:
             target = _parse_iso_date(row.get("target_date"))
@@ -369,6 +436,13 @@ class AppService:
             )
         return result
 
+    def get_weekly_voice_summary(self) -> list[dict[str, Any]]:
+        """Build weekly aggregated voice metrics."""
+        state = self.repository.load()
+        snapshot = self._build_state_snapshot(state)
+        hydrated = self._hydrate_voice_rows(snapshot["voice"], include_sensitive=True)
+        return self._build_weekly_voice_summary(hydrated)
+
     @staticmethod
     def _safe_mean(values: list[float]) -> float:
         """Mean helper returning 0 for empty arrays."""
@@ -411,7 +485,8 @@ class AppService:
     def list_medication_records(self) -> list[dict[str, Any]]:
         """Return medication records sorted by date."""
         state = self.repository.load()
-        return sorted(state["records"]["medication"], key=lambda x: x.get("date", ""))
+        snapshot = self._build_state_snapshot(state)
+        return list(snapshot["medication"])
 
     def add_visit_record(
         self,
@@ -445,7 +520,8 @@ class AppService:
     def list_visit_records(self) -> list[dict[str, Any]]:
         """Return visit records sorted by date."""
         state = self.repository.load()
-        return sorted(state["records"]["visits"], key=lambda x: x.get("date", ""))
+        snapshot = self._build_state_snapshot(state)
+        return list(snapshot["visits"])
 
     def add_other_event(
         self,
@@ -474,7 +550,8 @@ class AppService:
     def list_other_events(self) -> list[dict[str, Any]]:
         """List free-form events sorted by date."""
         state = self.repository.load()
-        return sorted(state["records"]["other_events"], key=lambda x: x.get("date", ""))
+        snapshot = self._build_state_snapshot(state)
+        return list(snapshot["events"])
 
     def get_habit_selection_for_date(self, target_date: date) -> HabitSelection:
         """Get adaptive checklist for day.
@@ -538,17 +615,18 @@ class AppService:
 
     def _compute_target_habit_count(self, state: dict[str, Any], reference_date: date) -> int:
         """Calculate adaptive checklist size (3 to 8)."""
-        last_count = int(state.get("meta", {}).get("last_habit_count", 3))
+        last_count = int(state.get("meta", {}).get("last_habit_count", _MIN_HABITS))
         logs = state["records"]["habits"]
         cutoff = reference_date - timedelta(days=7)
-        recent = [
-            row
-            for row in logs
-            if (_parse_iso_date(row.get("date")) or date.min) >= cutoff
-            and (_parse_iso_date(row.get("date")) or date.min) < reference_date
-        ]
+        recent: list[dict[str, Any]] = []
+        for row in logs:
+            row_day = _parse_iso_date(row.get("date"))
+            if row_day is None:
+                continue
+            if cutoff <= row_day < reference_date:
+                recent.append(row)
         if not recent:
-            return max(3, min(8, last_count))
+            return max(_MIN_HABITS, min(_MAX_HABITS, last_count))
 
         completion_ratios: list[float] = []
         for row in recent:
@@ -558,19 +636,20 @@ class AppService:
                 continue
             completion_ratios.append(len(completed) / max(1, len(shown)))
         if not completion_ratios:
-            return max(3, min(8, last_count))
+            return max(_MIN_HABITS, min(_MAX_HABITS, last_count))
 
         ratio = sum(completion_ratios) / len(completion_ratios)
         if ratio >= 0.8:
-            return min(8, last_count + 1)
+            return min(_MAX_HABITS, last_count + 1)
         if ratio <= 0.4:
-            return max(3, last_count - 1)
-        return max(3, min(8, last_count))
+            return max(_MIN_HABITS, last_count - 1)
+        return max(_MIN_HABITS, min(_MAX_HABITS, last_count))
 
     def list_habit_logs(self) -> list[dict[str, Any]]:
         """Return habit log entries sorted by date."""
         state = self.repository.load()
-        return sorted(state["records"]["habits"], key=lambda x: x.get("date", ""))
+        snapshot = self._build_state_snapshot(state)
+        return list(snapshot["habits"])
 
     def get_due_alerts(self, today: date | None = None) -> list[str]:
         """Build reminder messages for due/overdue items."""
@@ -630,21 +709,17 @@ class AppService:
                     )
         return alerts
 
-    def get_daily_summary(self, target_date: date) -> dict[str, Any]:
-        """Build non-sensitive daily summary for data view.
-
-        Args:
-            target_date: Selected day.
-
-        Returns:
-            Summary dictionary with mood/energy only for voice.
-        """
-        day_key = target_date.isoformat()
-        voice = [row for row in self.list_voice_records(False) if row.get("target_date") == day_key]
-        meds = [row for row in self.list_medication_records() if row.get("date") == day_key]
-        visits = [row for row in self.list_visit_records() if row.get("date") == day_key]
-        events = [row for row in self.list_other_events() if row.get("date") == day_key]
-        habits = [row for row in self.list_habit_logs() if row.get("date") == day_key]
+    def _build_daily_summary_from_snapshot(
+        self,
+        day_key: str,
+        snapshot: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Build non-sensitive daily summary from a precomputed snapshot."""
+        voice = list(snapshot["voice_by_date"].get(day_key, []))
+        meds = list(snapshot["medication_by_date"].get(day_key, []))
+        visits = list(snapshot["visits_by_date"].get(day_key, []))
+        events = list(snapshot["events_by_date"].get(day_key, []))
+        habits = list(snapshot["habits_by_date"].get(day_key, []))
 
         mood_h = [float(v.get("mood_auto", {}).get("happy", 0.0)) for v in voice]
         mood_s = [float(v.get("mood_auto", {}).get("sad", 0.0)) for v in voice]
@@ -664,20 +739,47 @@ class AppService:
             "habits": habits,
         }
 
+    def get_daily_summary(self, target_date: date) -> dict[str, Any]:
+        """Build non-sensitive daily summary for data view."""
+        state = self.repository.load()
+        snapshot = self._build_state_snapshot(state)
+        return self._build_daily_summary_from_snapshot(target_date.isoformat(), snapshot)
+
+    def build_daily_summaries(self) -> list[dict[str, Any]]:
+        """Build summaries for all known days, sorted by date."""
+        state = self.repository.load()
+        snapshot = self._build_state_snapshot(state)
+        return [
+            self._build_daily_summary_from_snapshot(day_key, snapshot)
+            for day_key in snapshot["all_dates"]
+        ]
+
     def build_calendar_dates_with_activity(self) -> dict[str, set[str]]:
         """Return date -> activity tags map for calendar marks."""
+        state = self.repository.load()
+        snapshot = self._build_state_snapshot(state)
         tags: dict[str, set[str]] = {}
 
-        for row in self.list_voice_records():
-            tags.setdefault(row.get("target_date", ""), set()).add("voz")
-        for row in self.list_medication_records():
-            tags.setdefault(row.get("date", ""), set()).add("med")
-        for row in self.list_visit_records():
-            tags.setdefault(row.get("date", ""), set()).add("visita")
-        for row in self.list_other_events():
-            tags.setdefault(row.get("date", ""), set()).add("evento")
-        for row in self.list_habit_logs():
-            tags.setdefault(row.get("date", ""), set()).add("habitos")
+        for day_key in snapshot["voice_by_date"].keys():
+            if _parse_iso_date(day_key) is None:
+                continue
+            tags.setdefault(day_key, set()).add("voice")
+        for day_key in snapshot["medication_by_date"].keys():
+            if _parse_iso_date(day_key) is None:
+                continue
+            tags.setdefault(day_key, set()).add("medication")
+        for day_key in snapshot["visits_by_date"].keys():
+            if _parse_iso_date(day_key) is None:
+                continue
+            tags.setdefault(day_key, set()).add("visit")
+        for day_key in snapshot["events_by_date"].keys():
+            if _parse_iso_date(day_key) is None:
+                continue
+            tags.setdefault(day_key, set()).add("event")
+        for day_key in snapshot["habits_by_date"].keys():
+            if _parse_iso_date(day_key) is None:
+                continue
+            tags.setdefault(day_key, set()).add("habit")
         return tags
 
     def to_export_frames(self) -> dict[str, pd.DataFrame]:
@@ -686,7 +788,11 @@ class AppService:
         Returns:
             Dictionary of sheet name to DataFrame.
         """
-        weekly_voice = pd.DataFrame(self.get_weekly_voice_summary())
+        state = self.repository.load()
+        snapshot = self._build_state_snapshot(state)
+
+        weekly_voice_rows = self._hydrate_voice_rows(snapshot["voice"], include_sensitive=True)
+        weekly_voice = pd.DataFrame(self._build_weekly_voice_summary(weekly_voice_rows))
         if weekly_voice.empty:
             weekly_voice = pd.DataFrame(
                 columns=[
@@ -703,26 +809,14 @@ class AppService:
                 ]
             )
 
-        medication = pd.DataFrame(self.list_medication_records())
-        visits = pd.DataFrame(self.list_visit_records())
-        events = pd.DataFrame(self.list_other_events())
-        habits = pd.DataFrame(self.list_habit_logs())
+        medication = pd.DataFrame(snapshot["medication"])
+        visits = pd.DataFrame(snapshot["visits"])
+        events = pd.DataFrame(snapshot["events"])
+        habits = pd.DataFrame(snapshot["habits"])
 
         daily_rows: list[dict[str, Any]] = []
-        date_keys = sorted(
-            {
-                *[row.get("target_date") for row in self.list_voice_records()],
-                *[row.get("date") for row in self.list_medication_records()],
-                *[row.get("date") for row in self.list_visit_records()],
-                *[row.get("date") for row in self.list_other_events()],
-                *[row.get("date") for row in self.list_habit_logs()],
-            }
-        )
-        for key in date_keys:
-            parsed = _parse_iso_date(key)
-            if parsed is None:
-                continue
-            summary = self.get_daily_summary(parsed)
+        for key in snapshot["all_dates"]:
+            summary = self._build_daily_summary_from_snapshot(key, snapshot)
             # Privacy rule: no daily pitch values here.
             daily_rows.append(
                 {

@@ -15,13 +15,13 @@ from utils import DataStoreError, get_logger
 logger = get_logger(__name__)
 
 
-def show_habits_dialog(parent) -> None:
+def show_habits_dialog(parent, app_service=None) -> None:
     """Show habits checklist dialog.
 
     Args:
         parent: Parent Tk window.
     """
-    app_service = get_app_service()
+    app_service = app_service or get_app_service()
     dlg = Toplevel(parent)
     dlg.title(t("menu.habits"))
     dlg.resizable(width=True, height=True)
@@ -105,18 +105,21 @@ def show_habits_dialog(parent) -> None:
             logger.exception("Habit save failed: %s", exc)
             messagebox.showerror(t("error.generic"), str(exc))
 
-    ttk.Button(frame, text=t("habits.load"), command=_render_for_day).grid(column=0, row=4, pady=8)
+    date_widget = getattr(date_entry, "widget", None)
+    if date_widget is not None:
+        date_widget.bind("<<DateEntrySelected>>", lambda _event: _render_for_day())
+
     ttk.Button(frame, text=t("common.save"), command=_save).grid(
-        column=1,
+        column=0,
         row=4,
         pady=8,
         sticky="w",
     )
     ttk.Button(frame, text=t("menu.close"), command=dlg.destroy).grid(
-        column=0,
-        row=5,
-        columnspan=2,
+        column=1,
+        row=4,
         pady=8,
+        sticky="w",
     )
 
     _render_for_day()

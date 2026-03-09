@@ -1,8 +1,11 @@
 """Main menu module for TransTools."""
 
 import sys
+from pathlib import Path
 from tkinter import Tk, Toplevel, ttk
 from typing import Callable
+
+from PIL import Image, ImageTk
 
 from config import UI_STYLE, __version__
 from config.theme import configure_ttk_styles, refresh_theme
@@ -10,15 +13,32 @@ from frontend.window_utils import place_window_centered
 from i18n import t
 
 
+def _load_menu_logo() -> ImageTk.PhotoImage | None:
+    """Load the main menu logo image if available."""
+    logo_path = Path(__file__).resolve().parents[2] / "images" / "TransTools_logo.png"
+    if not logo_path.exists():
+        return None
+
+    try:
+        image = Image.open(logo_path)
+    except Exception:
+        return None
+
+    max_width = 560
+    max_height = 235
+    image.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
+    return ImageTk.PhotoImage(image)
+
+
 def create_main_menu(
-    voice_study_callback: Callable[[], None],
-    medication_callback: Callable[[], None],
-    other_records_callback: Callable[[], None],
-    habits_callback: Callable[[], None],
-    contacts_callback: Callable[[], None],
-    app_info_callback: Callable[[], None],
-    view_data_callback: Callable[[], None],
-    config_callback: Callable[[], None],
+    voice_study_callback: Callable[[Tk], None],
+    medication_callback: Callable[[Tk], None],
+    other_records_callback: Callable[[Tk], None],
+    habits_callback: Callable[[Tk], None],
+    contacts_callback: Callable[[Tk], None],
+    app_info_callback: Callable[[Tk], None],
+    view_data_callback: Callable[[Tk], None],
+    config_callback: Callable[[Tk], None],
     exit_callback: Callable[[], None],
 ) -> Tk:
     """Create and display the main menu window.
@@ -46,59 +66,65 @@ def create_main_menu(
     configure_ttk_styles(menu)
 
     main_frame = ttk.Frame(menu, padding=UI_STYLE["padding"])
+    logo_image = _load_menu_logo()
+    if logo_image is not None:
+        menu._logo_image = logo_image  # type: ignore[attr-defined]
 
-    welcome = ttk.Label(main_frame, text=t("menu.welcome"), wraplength=380)
+    logo_label = None
+    if logo_image is not None:
+        logo_label = ttk.Label(main_frame, image=logo_image)
+    welcome = ttk.Label(main_frame, text=t("menu.welcome"), wraplength=460, justify="center")
     version_label = ttk.Label(main_frame, text=f"v{__version__}")
 
-    btn_width = UI_STYLE["button_width_wide"]
-    btn_width_small = UI_STYLE["button_width"]
+    btn_width = max(UI_STYLE["button_width_wide"], 24)
+    btn_width_small = max(UI_STYLE["button_width"], 18)
 
     voice_study_btn = ttk.Button(
         main_frame,
         text=t("menu.voice_record"),
-        command=voice_study_callback,
+        command=lambda: voice_study_callback(menu),
         width=btn_width,
     )
     medication_btn = ttk.Button(
         main_frame,
         text=t("menu.medication_record"),
-        command=medication_callback,
+        command=lambda: medication_callback(menu),
         width=btn_width,
     )
     other_records_btn = ttk.Button(
         main_frame,
         text=t("menu.other_records"),
-        command=other_records_callback,
+        command=lambda: other_records_callback(menu),
         width=btn_width,
     )
     habits_btn = ttk.Button(
         main_frame,
         text=t("menu.habits"),
-        command=habits_callback,
+        command=lambda: habits_callback(menu),
         width=btn_width,
     )
     contacts_btn = ttk.Button(
         main_frame,
         text=t("menu.info_contacts"),
-        command=contacts_callback,
+        command=lambda: contacts_callback(menu),
         width=btn_width,
     )
     app_info_btn = ttk.Button(
         main_frame,
         text=t("menu.app_info"),
-        command=app_info_callback,
+        command=lambda: app_info_callback(menu),
         width=btn_width,
     )
     view_data_btn = ttk.Button(
         main_frame,
         text=t("menu.view_data"),
-        command=view_data_callback,
+        command=lambda: view_data_callback(menu),
         width=btn_width,
     )
     config_btn = ttk.Button(
         main_frame,
         text=t("menu.config"),
-        command=config_callback,
+        command=lambda: config_callback(menu),
         width=btn_width_small,
     )
     exit_btn = ttk.Button(
@@ -110,17 +136,27 @@ def create_main_menu(
     )
 
     pad = UI_STYLE["padding"]
-    welcome.grid(column=0, row=0, columnspan=2, padx=pad, pady=pad)
-    version_label.grid(column=0, row=1, columnspan=2, padx=pad, pady=(0, pad))
-    voice_study_btn.grid(column=0, row=2, padx=pad, pady=pad)
-    medication_btn.grid(column=1, row=2, padx=pad, pady=pad)
-    other_records_btn.grid(column=0, row=3, padx=pad, pady=pad)
-    habits_btn.grid(column=1, row=3, padx=pad, pady=pad)
-    contacts_btn.grid(column=0, row=4, padx=pad, pady=pad)
-    app_info_btn.grid(column=1, row=4, padx=pad, pady=pad)
-    view_data_btn.grid(column=0, row=5, padx=pad, pady=pad)
-    config_btn.grid(column=0, row=6, padx=pad, pady=pad)
-    exit_btn.grid(column=1, row=6, padx=pad, pady=pad)
+    current_row = 0
+    if logo_label is not None:
+        logo_label.grid(column=0, row=current_row, columnspan=2, padx=pad, pady=(pad, 8))
+        current_row += 1
+    welcome.grid(column=0, row=current_row, columnspan=2, padx=pad, pady=(0, pad))
+    current_row += 1
+    version_label.grid(column=0, row=current_row, columnspan=2, padx=pad, pady=(0, pad))
+    current_row += 1
+    voice_study_btn.grid(column=0, row=current_row, padx=pad, pady=pad)
+    medication_btn.grid(column=1, row=current_row, padx=pad, pady=pad)
+    current_row += 1
+    other_records_btn.grid(column=0, row=current_row, padx=pad, pady=pad)
+    habits_btn.grid(column=1, row=current_row, padx=pad, pady=pad)
+    current_row += 1
+    contacts_btn.grid(column=0, row=current_row, padx=pad, pady=pad)
+    app_info_btn.grid(column=1, row=current_row, padx=pad, pady=pad)
+    current_row += 1
+    view_data_btn.grid(column=0, row=current_row, padx=pad, pady=pad)
+    current_row += 1
+    config_btn.grid(column=0, row=current_row, padx=pad, pady=pad)
+    exit_btn.grid(column=1, row=current_row, padx=pad, pady=pad)
 
     main_frame.columnconfigure(0, weight=1)
     main_frame.columnconfigure(1, weight=1)
@@ -179,14 +215,14 @@ def _close_application(menu: Tk) -> None:
 
 
 def start_main_menu(
-    voice_study_callback: Callable[[], None],
-    medication_callback: Callable[[], None],
-    other_records_callback: Callable[[], None],
-    habits_callback: Callable[[], None],
-    contacts_callback: Callable[[], None],
-    app_info_callback: Callable[[], None],
-    view_data_callback: Callable[[], None],
-    config_callback: Callable[[], None],
+    voice_study_callback: Callable[[Tk], None],
+    medication_callback: Callable[[Tk], None],
+    other_records_callback: Callable[[Tk], None],
+    habits_callback: Callable[[Tk], None],
+    contacts_callback: Callable[[Tk], None],
+    app_info_callback: Callable[[Tk], None],
+    view_data_callback: Callable[[Tk], None],
+    config_callback: Callable[[Tk], None],
     startup_callback: Callable[[Tk], None] | None = None,
 ) -> None:
     """Create and run the main menu.
@@ -213,9 +249,6 @@ def start_main_menu(
         config_callback=config_callback,
         exit_callback=lambda: show_exit_confirmation(menu),
     )
-    import __main__
-
-    __main__.menu = menu
     if startup_callback:
         startup_callback(menu)
     menu.mainloop()

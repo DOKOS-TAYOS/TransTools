@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from datetime import date
-from tkinter import BooleanVar, StringVar, Text, Toplevel, messagebox, ttk
+from tkinter import StringVar, Text, Toplevel, messagebox, ttk
 
 from config import UI_STYLE
 from core.context import get_app_service
 from frontend.date_widgets import create_date_entry
 from frontend.input_widgets import create_combobox, create_entry
+from frontend.text_widgets import configure_notes_widget
 from frontend.window_utils import place_window_centered
 from i18n import t
 from utils import DataStoreError, get_logger
@@ -16,13 +17,13 @@ from utils import DataStoreError, get_logger
 logger = get_logger(__name__)
 
 
-def show_other_records_dialog(parent) -> None:
+def show_other_records_dialog(parent, app_service=None) -> None:
     """Show dialog for visits and custom event logs.
 
     Args:
         parent: Parent Tk window.
     """
-    app_service = get_app_service()
+    app_service = app_service or get_app_service()
 
     dlg = Toplevel(parent)
     dlg.title(t("menu.other_records"))
@@ -30,7 +31,7 @@ def show_other_records_dialog(parent) -> None:
     dlg.configure(background=UI_STYLE["bg"])
 
     notebook = ttk.Notebook(dlg)
-    notebook.pack(fill="both", expand=True, padx=UI_STYLE["padding"], pady=UI_STYLE["padding"])
+    notebook.pack(fill="both", padx=UI_STYLE["padding"], pady=UI_STYLE["padding"])
 
     visit_tab = ttk.Frame(notebook, padding=UI_STYLE["padding"])
     event_tab = ttk.Frame(notebook, padding=UI_STYLE["padding"])
@@ -38,19 +39,40 @@ def show_other_records_dialog(parent) -> None:
     notebook.add(visit_tab, text=t("other.visits_tab"))
     notebook.add(event_tab, text=t("other.events_tab"))
 
-    _build_visit_tab(visit_tab, app_service)
-    _build_event_tab(event_tab, app_service)
+    visit_save = _build_visit_tab(visit_tab, app_service)
+    event_save = _build_event_tab(event_tab, app_service)
 
-    ttk.Button(dlg, text=t("menu.close"), command=dlg.destroy).pack(pady=6)
+    button_frame = ttk.Frame(dlg)
+    button_frame.pack(pady=6)
+
+    def _save_current_tab() -> None:
+        current_tab = notebook.select()
+        if current_tab == str(visit_tab):
+            visit_save()
+        elif current_tab == str(event_tab):
+            event_save()
+
+    ttk.Button(button_frame, text=t("common.save"), command=_save_current_tab).pack(
+        side="left",
+        padx=4,
+    )
+    ttk.Button(button_frame, text=t("menu.close"), command=dlg.destroy).pack(side="left", padx=4)
+
     dlg.transient(parent)
-    dlg.minsize(620, 420)
-    place_window_centered(dlg, width=760, height=520)
+    dlg.update_idletasks()
+    pad = int(UI_STYLE["padding"])
+    tab_req_width = max(visit_tab.winfo_reqwidth(), event_tab.winfo_reqwidth())
+    notebook_req_width = notebook.winfo_reqwidth()
+    notebook_req_height = notebook.winfo_reqheight()
+    target_width = max(760, tab_req_width + (pad * 4), notebook_req_width + (pad * 2))
+    target_height = max(360, notebook_req_height + button_frame.winfo_reqheight() + (pad * 4))
+    dlg.minsize(target_width, target_height)
+    place_window_centered(dlg, width=target_width, height=target_height)
 
 
-def _build_visit_tab(frame, app_service) -> None:
+def _build_visit_tab(frame, app_service):
     """Create visit logging tab content."""
     visit_type_var = StringVar(value="medical")
-    completed_var = BooleanVar(value=True)
     status_var = StringVar(value="")
 
     ttk.Label(frame, text=t("other.visit_date")).grid(column=0, row=0, sticky="w", pady=4)
@@ -67,21 +89,18 @@ def _build_visit_tab(frame, app_service) -> None:
         width=18,
     ).grid(column=1, row=1, sticky="w", pady=4)
 
-    ttk.Checkbutton(frame, text=t("other.visit_completed"), variable=completed_var).grid(
-        column=0, row=2, columnspan=2, sticky="w", pady=4
-    )
-
-    ttk.Label(frame, text=t("other.visit_next_date")).grid(column=0, row=3, sticky="w", pady=4)
+    ttk.Label(frame, text=t("other.visit_next_date")).grid(column=0, row=2, sticky="w", pady=4)
     next_entry = create_date_entry(frame, width=14)
     next_entry.set_date(date.today())
-    next_entry.grid(column=1, row=3, sticky="w", pady=4)
+    next_entry.grid(column=1, row=2, sticky="w", pady=4)
 
-    ttk.Label(frame, text=t("other.notes")).grid(column=0, row=4, sticky="nw", pady=4)
-    notes = Text(frame, width=46, height=6)
-    notes.grid(column=1, row=4, sticky="w", pady=4)
+    ttk.Label(frame, text=t("other.notes")).grid(column=0, row=3, sticky="nw", pady=4)
+    notes = Text(frame, width=46, height=7)
+    configure_notes_widget(notes)
+    notes.grid(column=1, row=3, sticky="w", pady=4)
 
     ttk.Label(frame, textvariable=status_var, wraplength=520).grid(
-        column=0, row=5, columnspan=2, sticky="w", pady=4
+        column=0, row=4, columnspan=2, sticky="w", pady=4
     )
 
     def _save_visit() -> None:
@@ -89,7 +108,7 @@ def _build_visit_tab(frame, app_service) -> None:
             app_service.add_visit_record(
                 target_date=date_entry.get_date(),
                 visit_type=visit_type_var.get(),
-                completed=bool(completed_var.get()),
+                completed=True,
                 next_visit_date=next_entry.get_date().isoformat(),
                 notes=notes.get("1.0", "end").strip() or None,
             )
@@ -102,10 +121,10 @@ def _build_visit_tab(frame, app_service) -> None:
             logger.exception("Visit save failed: %s", exc)
             messagebox.showerror(t("error.generic"), str(exc))
 
-    ttk.Button(frame, text=t("common.save"), command=_save_visit).grid(column=0, row=6, pady=8)
+    return _save_visit
 
 
-def _build_event_tab(frame, app_service) -> None:
+def _build_event_tab(frame, app_service):
     """Create free event logging tab content."""
     category_var = StringVar(value="general")
     tags_var = StringVar(value="")
@@ -133,7 +152,8 @@ def _build_event_tab(frame, app_service) -> None:
     )
 
     ttk.Label(frame, text=t("other.notes")).grid(column=0, row=3, sticky="nw", pady=4)
-    notes = Text(frame, width=46, height=8)
+    notes = Text(frame, width=46, height=7)
+    configure_notes_widget(notes)
     notes.grid(column=1, row=3, sticky="w", pady=4)
 
     ttk.Label(frame, textvariable=status_var, wraplength=520).grid(
@@ -162,4 +182,4 @@ def _build_event_tab(frame, app_service) -> None:
             logger.exception("Event save failed: %s", exc)
             messagebox.showerror(t("error.generic"), str(exc))
 
-    ttk.Button(frame, text=t("common.save"), command=_save_event).grid(column=0, row=5, pady=8)
+    return _save_event

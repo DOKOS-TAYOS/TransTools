@@ -16,7 +16,7 @@ from utils import DataStoreError, get_logger
 logger = get_logger(__name__)
 
 
-def show_onboarding_dialog(parent) -> bool:
+def show_onboarding_dialog(parent, app_service=None) -> bool:
     """Show first-run onboarding wizard.
 
     Args:
@@ -25,7 +25,7 @@ def show_onboarding_dialog(parent) -> bool:
     Returns:
         True when completed successfully.
     """
-    app_service = get_app_service()
+    app_service = app_service or get_app_service()
     if not app_service.needs_onboarding():
         return True
 
@@ -56,23 +56,26 @@ def show_onboarding_dialog(parent) -> bool:
     # Step 1: Welcome/help.
     s1 = ttk.Frame(body)
     ttk.Label(s1, text=t("onboarding.welcome_title")).pack(anchor="w", pady=(0, 6))
-    ttk.Label(
+    welcome_body_label = ttk.Label(
         s1,
         text=t("onboarding.welcome_body"),
         wraplength=560,
         justify="left",
-    ).pack(anchor="w")
+    )
+    welcome_body_label.pack(anchor="w", fill="x")
     ttk.Label(s1, text=t("onboarding.help_title")).pack(anchor="w", pady=(12, 6))
-    ttk.Label(
+    help_body_label = ttk.Label(
         s1,
         text=t("onboarding.help_body"),
         wraplength=560,
         justify="left",
-    ).pack(anchor="w")
+    )
+    help_body_label.pack(anchor="w", fill="x")
     steps.append(s1)
 
     # Step 2: Profile and optional settings.
     s2 = ttk.Frame(body)
+    s2.columnconfigure(1, weight=1)
     ttk.Label(s2, text=t("onboarding.first_name")).grid(column=0, row=0, sticky="w", pady=4)
     first_name_entry = create_entry(s2, textvariable=first_name_var, width=30)
     first_name_entry.grid(column=1, row=0, sticky="w", pady=4)
@@ -82,51 +85,78 @@ def show_onboarding_dialog(parent) -> bool:
         text=t("onboarding.next_medication_enable"),
         variable=has_next_med_var,
     ).grid(column=0, row=1, columnspan=2, sticky="w", pady=4)
-    med_date_entry = create_date_entry(s2, width=14)
+    medication_frame = ttk.Frame(s2)
+    medication_frame.grid(column=0, row=2, columnspan=2, sticky="ew")
+    medication_frame.columnconfigure(0, weight=1)
+    ttk.Label(medication_frame, text=t("onboarding.next_medication_date")).grid(
+        column=0,
+        row=0,
+        sticky="w",
+        pady=2,
+    )
+    med_date_entry = create_date_entry(medication_frame, width=14)
     med_date_entry.set_date(date.today())
-    med_date_entry.grid(column=1, row=2, sticky="w", pady=2)
-    ttk.Label(s2, text=t("onboarding.next_medication_date")).grid(
+    med_date_entry.grid(column=0, row=1, sticky="w", pady=(0, 4))
+    ttk.Label(medication_frame, text=t("onboarding.med_period")).grid(
         column=0,
         row=2,
         sticky="w",
         pady=2,
     )
-
-    ttk.Label(s2, text=t("onboarding.med_period")).grid(column=0, row=3, sticky="w", pady=2)
-    create_spinbox(s2, from_=1, to=60, width=8, textvariable=period_var).grid(
-        column=1,
+    create_spinbox(medication_frame, from_=1, to=60, width=8, textvariable=period_var).grid(
+        column=0,
         row=3,
         sticky="w",
-        pady=2,
+        pady=(0, 4),
     )
-
-    ttk.Label(s2, text=t("onboarding.med_dose")).grid(column=0, row=4, sticky="w", pady=2)
-    create_entry(s2, textvariable=dose_var, width=25).grid(
-        column=1,
+    ttk.Label(medication_frame, text=t("onboarding.med_dose")).grid(
+        column=0,
         row=4,
         sticky="w",
         pady=2,
+    )
+    create_entry(medication_frame, textvariable=dose_var, width=25).grid(
+        column=0,
+        row=5,
+        sticky="w",
+        pady=(0, 2),
     )
 
     ttk.Checkbutton(
         s2,
         text=t("onboarding.next_medical_enable"),
         variable=has_next_medical_var,
-    ).grid(column=0, row=5, columnspan=2, sticky="w", pady=4)
-    med_visit_entry = create_date_entry(s2, width=14)
+    ).grid(column=0, row=3, columnspan=2, sticky="w", pady=4)
+    medical_frame = ttk.Frame(s2)
+    medical_frame.grid(column=0, row=4, columnspan=2, sticky="ew")
+    medical_frame.columnconfigure(0, weight=1)
+    ttk.Label(medical_frame, text=t("onboarding.next_medical_date")).grid(
+        column=0,
+        row=0,
+        sticky="w",
+        pady=2,
+    )
+    med_visit_entry = create_date_entry(medical_frame, width=14)
     med_visit_entry.set_date(date.today())
-    med_visit_entry.grid(column=1, row=6, sticky="w", pady=2)
-    ttk.Label(s2, text=t("onboarding.next_medical_date")).grid(column=0, row=6, sticky="w", pady=2)
+    med_visit_entry.grid(column=0, row=1, sticky="w", pady=(0, 2))
 
     ttk.Checkbutton(
         s2,
         text=t("onboarding.next_psych_enable"),
         variable=has_next_psych_var,
-    ).grid(column=0, row=7, columnspan=2, sticky="w", pady=4)
-    psych_visit_entry = create_date_entry(s2, width=14)
+    ).grid(column=0, row=5, columnspan=2, sticky="w", pady=4)
+    psych_frame = ttk.Frame(s2)
+    psych_frame.grid(column=0, row=6, columnspan=2, sticky="ew")
+    psych_frame.columnconfigure(0, weight=1)
+    ttk.Label(psych_frame, text=t("onboarding.next_psych_date")).grid(
+        column=0,
+        row=0,
+        sticky="w",
+        pady=2,
+    )
+    psych_visit_entry = create_date_entry(psych_frame, width=14)
     psych_visit_entry.set_date(date.today())
-    psych_visit_entry.grid(column=1, row=8, sticky="w", pady=2)
-    ttk.Label(s2, text=t("onboarding.next_psych_date")).grid(column=0, row=8, sticky="w", pady=2)
+    psych_visit_entry.grid(column=0, row=1, sticky="w", pady=(0, 2))
     steps.append(s2)
 
     # Step 3: Confirmation.
@@ -154,12 +184,29 @@ def show_onboarding_dialog(parent) -> bool:
 
     result = {"done": False}
 
+    def _sync_optional_frames() -> None:
+        """Show optional config blocks only when their checkbox is enabled."""
+        if has_next_med_var.get():
+            medication_frame.grid()
+        else:
+            medication_frame.grid_remove()
+        if has_next_medical_var.get():
+            medical_frame.grid()
+        else:
+            medical_frame.grid_remove()
+        if has_next_psych_var.get():
+            psych_frame.grid()
+        else:
+            psych_frame.grid_remove()
+        dlg.update_idletasks()
+
     def _render_step() -> None:
         for idx, step in enumerate(steps):
             if idx == step_idx["value"]:
                 step.pack(fill="both", expand=True)
             else:
                 step.pack_forget()
+        _sync_optional_frames()
         btn_prev.configure(state=("normal" if step_idx["value"] > 0 else "disabled"))
         btn_next.configure(state=("normal" if step_idx["value"] < len(steps) - 1 else "disabled"))
         btn_finish.configure(
@@ -229,13 +276,33 @@ def show_onboarding_dialog(parent) -> bool:
     btn_next.configure(command=_next)
     btn_finish.configure(command=_finish)
     btn_cancel.configure(command=_cancel)
+    has_next_med_var.trace_add("write", lambda *_args: _sync_optional_frames())
+    has_next_medical_var.trace_add("write", lambda *_args: _sync_optional_frames())
+    has_next_psych_var.trace_add("write", lambda *_args: _sync_optional_frames())
 
     dlg.protocol("WM_DELETE_WINDOW", _cancel)
     _render_step()
     dlg.update_idletasks()
 
+    original_med = has_next_med_var.get()
+    original_medical = has_next_medical_var.get()
+    original_psych = has_next_psych_var.get()
+
+    has_next_med_var.set(True)
+    has_next_medical_var.set(True)
+    has_next_psych_var.set(True)
+    _sync_optional_frames()
+    dlg.update_idletasks()
+
     steps_req_width = max(step.winfo_reqwidth() for step in steps)
     steps_req_height = max(step.winfo_reqheight() for step in steps)
+
+    has_next_med_var.set(original_med)
+    has_next_medical_var.set(original_medical)
+    has_next_psych_var.set(original_psych)
+    _sync_optional_frames()
+    dlg.update_idletasks()
+
     nav_req_width = nav.winfo_reqwidth()
     nav_req_height = nav.winfo_reqheight()
     pad = int(UI_STYLE["padding"])
@@ -246,9 +313,13 @@ def show_onboarding_dialog(parent) -> bool:
         nav_req_width + (pad * 6),
     )
     target_height = max(
-        640,
+        760,
         steps_req_height + nav_req_height + (pad * 10),
     )
+
+    text_wraplength = max(680, target_width - (pad * 10))
+    welcome_body_label.configure(wraplength=text_wraplength)
+    help_body_label.configure(wraplength=text_wraplength)
 
     dlg.minsize(target_width, target_height)
     place_window_centered(dlg, width=target_width, height=target_height)

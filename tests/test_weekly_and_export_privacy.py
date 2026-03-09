@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from audio.analyzer import VoiceAnalysisResult
+from core.types import VoiceAnalysisResult
 
 
 def _sample(mean: float, day: date) -> tuple[VoiceAnalysisResult, date]:
@@ -52,4 +52,3 @@ def test_daily_export_has_no_daily_pitch_columns(app_service) -> None:
     assert "pitch_min_hz" not in cols
     assert "pitch_max_hz" not in cols
     assert "voice_samples" in cols
-

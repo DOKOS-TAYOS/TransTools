@@ -16,4 +16,11 @@ if not exist .venv (
 
 REM Activate virtual environment and run the program
 call .venv\Scripts\activate.bat
-start "" pythonw src\main.py
+pythonw src\main.py
+if errorlevel 1 (
+    echo ERROR: TransTools failed to start with pythonw.
+    echo Showing detailed error output...
+    python src\main.py
+    pause
+    exit /b 1
+)

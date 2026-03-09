@@ -79,19 +79,19 @@ def show_config_dialog(parent, app_service: Any | None = None) -> bool:
     canvas.bind("<Configure>", _on_canvas_configure)
 
     def _on_mousewheel(event) -> None:
-        if getattr(event, "num", None) == 5 or getattr(event, "delta", 0) == -120:
+        if getattr(event, "num", None) == 5 or getattr(event, "delta", 0) < 0:
             canvas.yview_scroll(1, "units")
-        elif getattr(event, "num", None) == 4 or getattr(event, "delta", 0) == 120:
+        elif getattr(event, "num", None) == 4 or getattr(event, "delta", 0) > 0:
             canvas.yview_scroll(-1, "units")
 
-    canvas.bind_all("<MouseWheel>", _on_mousewheel)
-    canvas.bind_all("<Button-4>", _on_mousewheel)
-    canvas.bind_all("<Button-5>", _on_mousewheel)
+    dlg.bind("<MouseWheel>", _on_mousewheel)
+    dlg.bind("<Button-4>", _on_mousewheel)
+    dlg.bind("<Button-5>", _on_mousewheel)
 
     notebook = ttk.Notebook(inner_frame)
 
-    # --- General tab ---
-    gen_frame = ttk.Frame(notebook, padding=UI_STYLE["padding"])
+    # --- User tab ---
+    user_frame = ttk.Frame(notebook, padding=UI_STYLE["padding"])
     row = 0
 
     profile = app_service.get_profile() if app_service else {}
@@ -99,30 +99,30 @@ def show_config_dialog(parent, app_service: Any | None = None) -> bool:
 
     first_name_var = StringVar(value=profile.get("first_name", ""))
     row = _add_param_row(
-        gen_frame,
+        user_frame,
         row,
         "config.profile.first_name",
         "config.profile.first_name_desc",
-        ttk.Entry(gen_frame, textvariable=first_name_var, width=30, font=_font),
+        ttk.Entry(user_frame, textvariable=first_name_var, width=30, font=_font),
     )
 
     med_next_var = StringVar(value=health.get("next_medication_date") or "")
     row = _add_param_row(
-        gen_frame,
+        user_frame,
         row,
         "config.profile.next_medication_date",
         "config.profile.next_medication_date_desc",
-        ttk.Entry(gen_frame, textvariable=med_next_var, width=16, font=_font),
+        ttk.Entry(user_frame, textvariable=med_next_var, width=16, font=_font),
     )
 
     med_period_var = IntVar(value=health.get("medication_every_days") or 7)
     row = _add_param_row(
-        gen_frame,
+        user_frame,
         row,
         "config.profile.medication_every_days",
         "config.profile.medication_every_days_desc",
         ttk.Spinbox(
-            gen_frame,
+            user_frame,
             from_=1,
             to=60,
             textvariable=med_period_var,
@@ -133,30 +133,36 @@ def show_config_dialog(parent, app_service: Any | None = None) -> bool:
 
     med_dose_var = StringVar(value=health.get("medication_dose") or "")
     row = _add_param_row(
-        gen_frame,
+        user_frame,
         row,
         "config.profile.medication_dose",
         "config.profile.medication_dose_desc",
-        ttk.Entry(gen_frame, textvariable=med_dose_var, width=20, font=_font),
+        ttk.Entry(user_frame, textvariable=med_dose_var, width=20, font=_font),
     )
 
     next_medical_var = StringVar(value=health.get("next_medical_visit_date") or "")
     row = _add_param_row(
-        gen_frame,
+        user_frame,
         row,
         "config.profile.next_medical_visit_date",
         "config.profile.next_medical_visit_date_desc",
-        ttk.Entry(gen_frame, textvariable=next_medical_var, width=16, font=_font),
+        ttk.Entry(user_frame, textvariable=next_medical_var, width=16, font=_font),
     )
 
     next_psych_var = StringVar(value=health.get("next_psych_visit_date") or "")
     row = _add_param_row(
-        gen_frame,
+        user_frame,
         row,
         "config.profile.next_psych_visit_date",
         "config.profile.next_psych_visit_date_desc",
-        ttk.Entry(gen_frame, textvariable=next_psych_var, width=16, font=_font),
+        ttk.Entry(user_frame, textvariable=next_psych_var, width=16, font=_font),
     )
+
+    notebook.add(user_frame, text=t("config.tab_user"))
+
+    # --- General settings tab ---
+    gen_frame = ttk.Frame(notebook, padding=UI_STYLE["padding"])
+    row = 0
 
     lang_var = StringVar(value=get_env_from_schema("LANGUAGE"))
     row = _add_param_row(
@@ -439,16 +445,6 @@ def show_config_dialog(parent, app_service: Any | None = None) -> bool:
     w = max(400, req_w)
     h = min(max(300, req_h), max_h)
     place_window_centered(dlg, width=w, height=h)
-
-    def _unbind_mousewheel() -> None:
-        try:
-            canvas.unbind_all("<MouseWheel>")
-            canvas.unbind_all("<Button-4>")
-            canvas.unbind_all("<Button-5>")
-        except Exception:
-            pass
-
-    dlg.bind("<Destroy>", lambda e: _unbind_mousewheel())
 
     def _on_close() -> None:
         dlg.destroy()

@@ -90,6 +90,12 @@ def configure_ttk_styles(root) -> None:
     # Buttons: slightly lighter on hover
     btn_hover = _adjust_hex_brightness(btn_bg, 1.2)
 
+    # Checkbox indicator: keep it very close to background to avoid harsh accents
+    check_bg = _adjust_hex_brightness(bg, 1.10)
+    check_hover = _adjust_hex_brightness(bg, 1.22)
+    check_active = _adjust_hex_brightness(bg, 1.22)
+    check_disabled = _adjust_hex_brightness(bg, 0.96)
+
     # TFrame - main background
     style.configure("TFrame", background=bg)
 
@@ -179,6 +185,22 @@ def configure_ttk_styles(root) -> None:
         foreground=fg,
         font=font,
         indicatorsize=UI_STYLE["font_size"],
+        indicatorbackground=check_bg,
+        indicatorforeground=fg,
+        indicatormargin=2,
+    )
+    style.map(
+        "TCheckbutton",
+        background=[("active", check_hover), ("selected", bg)],
+        indicatorbackground=[
+            ("selected", check_active),
+            ("active", check_hover),
+            ("disabled", check_disabled),
+        ],
+        indicatorforeground=[
+            ("selected", fg),
+            ("disabled", _adjust_hex_brightness(fg, 0.85) if fg.startswith("#") else fg),
+        ],
     )
 
     # TNotebook.Tab - larger tabs for config dialog
@@ -186,13 +208,19 @@ def configure_ttk_styles(root) -> None:
     tab_pad_v = max(8, UI_STYLE["padding"])
     tab_bg = _adjust_hex_brightness(bg, 0.9)
     style.configure(
+        "TNotebook",
+        background=bg,
+        borderwidth=0,
+        tabmargins=(0, 0, 0, 0),
+    )
+    style.configure(
         "TNotebook.Tab",
         background=tab_bg,
         foreground=fg,
         padding=(tab_pad_h, tab_pad_v),
         font=font,
     )
-    style.map("TNotebook.Tab", background=[("selected", bg)])
+    style.map("TNotebook.Tab", background=[("selected", bg), ("active", bg)])
 
 
 # Initialize on import

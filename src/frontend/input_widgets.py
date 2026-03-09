@@ -68,4 +68,3 @@ def create_spinbox(parent, **kwargs: Any) -> ttk.Spinbox:
     except TclError:
         options.pop("font", None)
         return ttk.Spinbox(parent, **options)
-

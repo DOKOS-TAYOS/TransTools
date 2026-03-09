@@ -28,7 +28,7 @@ def _load_locale(lang: str) -> dict[str, str]:
             _CACHE[lang] = {}
             return {}
         return _load_locale(_DEFAULT_LANG)
-    with open(path, encoding="utf-8") as f:
+    with open(path, encoding="utf-8-sig") as f:
         data = json.load(f)
     _CACHE[lang] = data
     return data

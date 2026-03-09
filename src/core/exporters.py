@@ -9,18 +9,14 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.figure import Figure
 
+from i18n import t
 from utils import DataStoreError, get_logger
 
 logger = get_logger(__name__)
 
 
 def export_to_csv(frames: dict[str, pd.DataFrame], destination: Path) -> None:
-    """Export daily summary dataset to CSV.
-
-    Args:
-        frames: Export frames from app service.
-        destination: Output CSV path.
-    """
+    """Export daily summary dataset to CSV."""
     try:
         target = frames.get("resumen_diario", pd.DataFrame())
         target.to_csv(destination, index=False)
@@ -30,12 +26,7 @@ def export_to_csv(frames: dict[str, pd.DataFrame], destination: Path) -> None:
 
 
 def export_to_excel(frames: dict[str, pd.DataFrame], destination: Path) -> None:
-    """Export full report data to Excel workbook.
-
-    Args:
-        frames: Export frames from app service.
-        destination: Output XLSX path.
-    """
+    """Export full report data to Excel workbook."""
     try:
         with pd.ExcelWriter(destination, engine="openpyxl") as writer:
             for sheet_name, frame in frames.items():
@@ -46,25 +37,20 @@ def export_to_excel(frames: dict[str, pd.DataFrame], destination: Path) -> None:
 
 
 def export_to_png(frames: dict[str, pd.DataFrame], destination: Path) -> None:
-    """Export weekly voice trend chart as PNG.
-
-    Args:
-        frames: Export frames from app service.
-        destination: Output PNG path.
-    """
+    """Export weekly voice trend chart as PNG."""
     weekly = frames.get("voz_semanal", pd.DataFrame()).copy()
     fig: Figure | None = None
     try:
         fig, ax = plt.subplots(figsize=(10, 5), dpi=120)
         if weekly.empty:
-            ax.text(0.5, 0.5, "Sin datos semanales de voz", ha="center", va="center")
+            ax.text(0.5, 0.5, t("export.png.no_data"), ha="center", va="center")
             ax.set_axis_off()
         else:
             weekly = weekly.sort_values("week_start")
             ax.plot(weekly["week_start"], weekly["pitch_mean_hz"], marker="o", color="#2c5f7a")
-            ax.set_title("Tendencia semanal de tono de voz")
-            ax.set_xlabel("Semana")
-            ax.set_ylabel("Pitch medio semanal (Hz)")
+            ax.set_title(t("export.png.title"))
+            ax.set_xlabel(t("export.png.xlabel"))
+            ax.set_ylabel(t("export.png.ylabel"))
             ax.tick_params(axis="x", rotation=45)
             ax.grid(alpha=0.2)
         fig.tight_layout()
@@ -82,13 +68,7 @@ def export_to_pdf(
     destination: Path,
     profile_name: str | None = None,
 ) -> None:
-    """Export a compact weekly PDF report.
-
-    Args:
-        frames: Export frames from app service.
-        destination: Output PDF path.
-        profile_name: Optional first name for title.
-    """
+    """Export a compact weekly PDF report."""
     try:
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import A4
@@ -96,7 +76,7 @@ def export_to_pdf(
         from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
     except Exception as exc:
         raise DataStoreError(
-            "La librería reportlab es necesaria para exportar PDF."
+            "La libreria reportlab es necesaria para exportar PDF."
         ) from exc
 
     weekly = frames.get("voz_semanal", pd.DataFrame())
@@ -117,24 +97,24 @@ def export_to_pdf(
         )
         story: list[Any] = []
 
-        who = profile_name.strip() if profile_name else "Usuario"
-        story.append(Paragraph(f"Informe semanal TransTools - {who}", title_style))
-        story.append(Paragraph("Resumen generado localmente (modo offline).", styles["Normal"]))
+        who = profile_name.strip() if profile_name else t("export.pdf.default_user")
+        story.append(Paragraph(t("export.pdf.title", name=who), title_style))
+        story.append(Paragraph(t("export.pdf.subtitle"), styles["Normal"]))
         story.append(Spacer(1, 12))
 
-        story.append(Paragraph("1) Voz (agregado semanal)", styles["Heading3"]))
+        story.append(Paragraph(t("export.pdf.section_voice"), styles["Heading3"]))
         story.extend(_table_or_empty_message(weekly, max_rows=8))
         story.append(Spacer(1, 10))
 
-        story.append(Paragraph("2) Medicación (últimos registros)", styles["Heading3"]))
+        story.append(Paragraph(t("export.pdf.section_medication"), styles["Heading3"]))
         story.extend(_table_or_empty_message(medication, max_rows=10))
         story.append(Spacer(1, 10))
 
-        story.append(Paragraph("3) Visitas médicas/psicología", styles["Heading3"]))
+        story.append(Paragraph(t("export.pdf.section_visits"), styles["Heading3"]))
         story.extend(_table_or_empty_message(visits, max_rows=10))
         story.append(Spacer(1, 10))
 
-        story.append(Paragraph("4) Checklist de hábitos", styles["Heading3"]))
+        story.append(Paragraph(t("export.pdf.section_habits"), styles["Heading3"]))
         story.extend(_table_or_empty_message(habits, max_rows=10))
 
         doc.build(story)
@@ -144,22 +124,14 @@ def export_to_pdf(
 
 
 def _table_or_empty_message(frame: pd.DataFrame, max_rows: int) -> list[Any]:
-    """Build reportlab elements for a dataframe section.
-
-    Args:
-        frame: Dataframe to convert.
-        max_rows: Maximum number of rows shown in PDF.
-
-    Returns:
-        List of reportlab flowables.
-    """
+    """Build reportlab elements for a dataframe section."""
     from reportlab.lib import colors
     from reportlab.lib.styles import getSampleStyleSheet
     from reportlab.platypus import Paragraph, Table, TableStyle
 
     styles = getSampleStyleSheet()
     if frame.empty:
-        return [Paragraph("Sin datos disponibles.", styles["Italic"])]
+        return [Paragraph(t("export.table.no_data"), styles["Italic"])]
 
     subset = frame.head(max_rows).copy()
     cols = list(subset.columns)

@@ -18,7 +18,7 @@ from matplotlib.figure import Figure
 from config import UI_STYLE
 from core.context import get_app_service
 from core.exporters import export_to_csv, export_to_excel, export_to_pdf, export_to_png
-from frontend.date_widgets import create_date_entry
+from frontend.date_widgets import create_date_entry, get_calendar_locale
 from frontend.input_widgets import create_combobox
 from frontend.window_utils import place_window_centered
 from i18n import t
@@ -27,13 +27,13 @@ from utils import DataStoreError, get_logger
 logger = get_logger(__name__)
 
 
-def show_data_view_dialog(parent) -> None:
+def show_data_view_dialog(parent, app_service=None) -> None:
     """Show unified data dialog with calendar, weekly chart and export.
 
     Args:
         parent: Parent Tk window.
     """
-    app_service = get_app_service()
+    app_service = app_service or get_app_service()
     dlg = Toplevel(parent)
     dlg.title(t("menu.view_data"))
     dlg.resizable(width=True, height=True)
@@ -70,11 +70,9 @@ def show_data_view_dialog(parent) -> None:
 
     calendar_tab = ttk.Frame(notebook, padding=UI_STYLE["padding"])
     chart_tab = ttk.Frame(notebook, padding=UI_STYLE["padding"])
-    export_tab = ttk.Frame(notebook, padding=UI_STYLE["padding"])
 
     notebook.add(calendar_tab, text=t("data.tab_calendar"))
     notebook.add(chart_tab, text=t("data.tab_weekly"))
-    notebook.add(export_tab, text=t("data.tab_export"))
 
     _build_calendar_tab(calendar_tab, app_service)
 
@@ -97,12 +95,10 @@ def show_data_view_dialog(parent) -> None:
     canvas.draw()
     canvas.get_tk_widget().pack(fill="both", expand=True)
 
-    _build_export_tab(export_tab, app_service)
-
     ttk.Button(dlg, text=t("menu.close"), command=_on_close).pack(pady=8)
     dlg.transient(parent)
-    dlg.minsize(760, 560)
-    place_window_centered(dlg, width=980, height=700)
+    dlg.minsize(760, 700)
+    place_window_centered(dlg, width=980, height=860)
 
 
 def _build_calendar_tab(parent, app_service) -> None:
@@ -111,6 +107,7 @@ def _build_calendar_tab(parent, app_service) -> None:
     right = ttk.Frame(parent)
     left.pack(side="left", fill="y", padx=(0, 8))
     right.pack(side="left", fill="both", expand=True)
+    right.update_idletasks()
 
     details = ttk.Treeview(
         right,
@@ -120,9 +117,24 @@ def _build_calendar_tab(parent, app_service) -> None:
     )
     details.heading("k", text=t("data.summary_field"))
     details.heading("v", text=t("data.summary_value"))
-    details.column("k", width=200, anchor="w")
-    details.column("v", width=420, anchor="w")
+    details.column("k", width=240, minwidth=200, stretch=False, anchor="w")
+    details.column("v", width=220, minwidth=160, stretch=False, anchor="w")
     details.pack(fill="both", expand=True)
+
+    def _fit_detail_columns(event=None) -> None:
+        """Fit treeview columns inside the visible table width."""
+        available_width = details.winfo_width()
+        if available_width <= 1 and event is not None:
+            available_width = getattr(event, "width", 0)
+        if available_width <= 1:
+            return
+
+        field_width = min(260, max(190, int(available_width * 0.45)))
+        value_width = max(150, available_width - field_width - 6)
+        details.column("k", width=field_width)
+        details.column("v", width=value_width)
+
+    details.bind("<Configure>", _fit_detail_columns)
 
     def _render_day(day: date) -> None:
         summary = app_service.get_daily_summary(day)
@@ -174,17 +186,28 @@ def _build_calendar_tab(parent, app_service) -> None:
             left,
             selectmode="day",
             date_pattern="yyyy-mm-dd",
-            locale="es_ES",
+            locale=get_calendar_locale(),
             font=(UI_STYLE["font_family"], UI_STYLE["font_size"]),
             headersfont=(UI_STYLE["font_family"], UI_STYLE["font_size"]),
         )
         cal.pack(fill="x")
 
+        activity_label = {
+            "voice": t("data.activity_voice"),
+            "medication": t("data.activity_medication"),
+            "visit": t("data.activity_visit"),
+            "event": t("data.activity_event"),
+            "habit": t("data.activity_habit"),
+        }
         tags = app_service.build_calendar_dates_with_activity()
         for day_key, kinds in tags.items():
-            parsed = datetime.strptime(day_key, "%Y-%m-%d").date()
+            try:
+                parsed = datetime.strptime(day_key, "%Y-%m-%d").date()
+            except ValueError:
+                continue
             tag_name = "activity"
-            cal.calevent_create(parsed, ", ".join(sorted(kinds)), tag_name)
+            labels = [activity_label.get(kind, kind) for kind in sorted(kinds)]
+            cal.calevent_create(parsed, ", ".join(labels), tag_name)
             cal.tag_config(tag_name, background="#d8ecf8", foreground="#0f3a56")
 
         def _on_pick(_event=None) -> None:
@@ -205,26 +228,50 @@ def _build_calendar_tab(parent, app_service) -> None:
         ).grid(pady=4)
         _render_day(date.today())
 
+    _build_export_controls(left, app_service)
 
-def _build_export_tab(parent, app_service) -> None:
-    """Build export controls tab."""
+
+def _build_export_controls(parent, app_service) -> None:
+    """Build export controls below the calendar area."""
+    export_frame = ttk.Frame(parent, padding=UI_STYLE["padding"])
+    export_frame.pack(fill="x", pady=(12, 0))
+
     ttk.Label(
-        parent,
+        export_frame,
+        text=t("data.tab_export"),
+    ).pack(anchor="w")
+
+    description_label = ttk.Label(
+        export_frame,
         text=t("data.export_desc"),
-        wraplength=520,
+        wraplength=240,
         justify="left",
-    ).pack(anchor="w", pady=4)
+    )
+    description_label.pack(fill="x", anchor="w", pady=(4, 4))
+    controls_row = ttk.Frame(export_frame)
+    controls_row.pack(fill="x", pady=6)
     fmt = create_combobox(
-        parent,
+        controls_row,
         state="readonly",
         values=["csv", "xlsx", "pdf", "png"],
         width=12,
     )
     fmt.set("csv")
-    fmt.pack(anchor="w", pady=6)
+    fmt.pack(side="left")
 
-    status = ttk.Label(parent, text="")
-    status.pack(anchor="w", pady=6)
+    status = ttk.Label(export_frame, text="", wraplength=240, justify="left")
+    status.pack(fill="x", anchor="w", pady=6)
+
+    def _sync_export_wrap(event=None) -> None:
+        """Expand export text to the available width."""
+        available_width = export_frame.winfo_width()
+        if available_width <= 1 and event is not None:
+            available_width = getattr(event, "width", 0)
+        wraplength = max(220, available_width - (UI_STYLE["padding"] * 2))
+        description_label.configure(wraplength=wraplength)
+        status.configure(wraplength=wraplength)
+
+    export_frame.bind("<Configure>", _sync_export_wrap)
 
     def _run_export() -> None:
         selected = fmt.get().strip().lower()
@@ -255,4 +302,7 @@ def _build_export_tab(parent, app_service) -> None:
             logger.exception("Export failed: %s", exc)
             messagebox.showerror(t("error.generic"), str(exc))
 
-    ttk.Button(parent, text=t("data.export_button"), command=_run_export).pack(anchor="w", pady=8)
+    ttk.Button(controls_row, text=t("data.export_button"), command=_run_export).pack(
+        side="left",
+        padx=(8, 0),
+    )
