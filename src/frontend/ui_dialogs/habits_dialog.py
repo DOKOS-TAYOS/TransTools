@@ -80,9 +80,10 @@ def show_habits_dialog(parent, app_service=None) -> None:
         for habit in selected.shown_habits:
             var = BooleanVar(value=habit["id"] in selected.completed_habits)
             row_vars[habit["id"]] = var
+            habit_label = t("habit.name." + habit["id"])
             ttk.Checkbutton(
                 checklist_frame,
-                text=habit["name"],
+                text=habit_label,
                 variable=var,
             ).pack(anchor="w", pady=2)
 
