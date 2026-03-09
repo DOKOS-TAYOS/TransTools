@@ -2,63 +2,207 @@
   "national": [
     {
       "organization": "FELGTBI+",
-      "description": "Federacion estatal de asociaciones LGTBI+",
-      "phone": "",
-      "email": "felgtbi@felgtbi.org",
+      "description": "Federación Estatal de Lesbianas, Gais, Trans, Bisexuales e Intersexuales. Más de 50 entidades federadas.",
+      "phone": "913 604 605",
+      "email": "info@felgtbi.org",
       "website": "https://felgtbi.org/"
     },
     {
-      "organization": "Fundacion Triangulo",
-      "description": "Apoyo social, juridico y comunitario LGTBI+",
+      "organization": "Fundación Triángulo",
+      "description": "Igualdad social LGTBI. Asesoramiento, salud, educación, cultura. Delegaciones en varias comunidades.",
       "phone": "",
       "email": "fundacion@fundaciontriangulo.org",
-      "website": "https://www.fundaciontriangulo.org/"
+      "website": "https://fundaciontriangulo.org/"
     },
     {
       "organization": "Chrysallis",
-      "description": "Asociacion de familias de menores trans",
+      "description": "Asociación de familias de infancia y juventud trans. Apoyo, asesoramiento y defensa de derechos.",
       "phone": "",
-      "email": "info@chrysallis.org.es",
-      "website": "https://chrysallis.org.es/"
+      "email": "contacto@chrysallis.org",
+      "website": "https://chrysallis.org/"
     }
   ],
   "regional": {
-    "Andalucia": [
+    "Andalucía": [
       {
-        "organization": "ATA-Sylvia Rivera",
-        "description": "Asociacion trans andaluza de apoyo y acompanamiento",
-        "phone": "",
-        "email": "contacto@ata-sylviarivera.org",
-        "website": "https://ata-sylviarivera.org/"
+        "organization": "ATA - Sylvia Rivera",
+        "description": "Asociación trans de Andalucía. Apoyo integral, asesoría jurídica, guías sanitarias y educativas.",
+        "phone": "954 228 728",
+        "email": "asociacion@atandalucia.org",
+        "website": "https://www.atandalucia.es/"
+      },
+      {
+        "organization": "Fundación Triángulo Andalucía",
+        "description": "Atención integral LGTBI. Asesoría, salud sexual, apoyo psicológico.",
+        "phone": "690 229 553",
+        "email": "atencion.andalucia@fundaciontriangulo.es",
+        "website": "https://fundaciontriangulo.org/"
       }
     ],
-    "Cataluna": [
+    "Aragón": [
       {
-        "organization": "Transit",
-        "description": "Servicio de atencion sanitaria trans en Cataluna",
+        "organization": "SOMOS LGTB+",
+        "description": "ONG activista en Aragón. Atención social, psicosocial, salud sexual y VIH. Servicio SexInform.",
+        "phone": "976 925 843",
+        "email": "hola@somoslgtb.com",
+        "website": "https://somoslgtb.com/"
+      }
+    ],
+    "Asturias": [
+      {
+        "organization": "XEGA",
+        "description": "Asociación Xente LGTBI+ de Asturias. Salud sexual, línea contra LGTBIfobia (900 70 11 38), familias.",
+        "phone": "621 052 483",
+        "email": "info@xega.org",
+        "website": "https://www.xega.org/"
+      },
+      {
+        "organization": "Llar Trans",
+        "description": "Atención a personas trans y familias. Formación a profesionales. Proyecto TRANS-FORMANDO Asturies.",
+        "phone": "",
+        "email": "hola@llartrans.org",
+        "website": "https://www.llartrans.org/"
+      }
+    ],
+    "Canarias": [
+      {
+        "organization": "Colectivo Gamá",
+        "description": "LGTBI de Canarias. Atención social, psicológica, jurídica, pruebas VIH, jóvenes y mayores.",
+        "phone": "928 433 427",
+        "email": "gama@colectivogama.com",
+        "website": "https://www.colectivogama.com/"
+      },
+      {
+        "organization": "Diversas",
+        "description": "Asociación LGBTIQA* en Tenerife. Salud integral, psicosocial, jurídica y socioeducativa.",
+        "phone": "922 38 97 27",
+        "email": "diversas@felgtbi.org",
+        "website": "https://diversascanarias.com/"
+      }
+    ],
+    "Cantabria": [
+      {
+        "organization": "ALEGA",
+        "description": "Asociación LGTBI de Cantabria. Asesoría psicológica y jurídica, talleres, jóvenes.",
+        "phone": "648 615 127",
+        "email": "alega@felgtbi.org",
+        "website": "https://www.alega.org/"
+      }
+    ],
+    "Castilla y León": [
+      {
+        "organization": "Fundación Triángulo Castilla y León",
+        "description": "Igualdad LGTBI en CyL. Sede en Valladolid. Asesoría, salud, juventud.",
+        "phone": "983 395 494",
+        "email": "valladolid@fundaciontriangulo.es",
+        "website": "https://fundaciontriangulo.org/"
+      }
+    ],
+    "Castilla-La Mancha": [
+      {
+        "organization": "WADO LGTBI+",
+        "description": "Asociación LGTBI+ de Castilla-La Mancha. Sede en Guadalajara y Ciudad Real. Refugio contra LGTBIfobia.",
+        "phone": "",
+        "email": "wadoasociacion@gmail.com",
+        "website": "https://www.wadolgtbi.org/"
+      }
+    ],
+    "Cataluña": [
+      {
+        "organization": "Trànsit (CatSalut)",
+        "description": "Servicio sanitario público de atención a personas trans. Modelo biopsicosocial. Unidades en Barcelona y área metropolitana.",
         "phone": "",
         "email": "",
-        "website": "https://catsalut.gencat.cat/ca/serveis-sanitaris/transit/"
+        "website": "https://catsalut.gencat.cat/ca/serveis-sanitaris/altres-serveis/model-atencio-salut-persones-trans"
       }
     ],
     "Comunidad de Madrid": [
       {
         "organization": "COGAM",
-        "description": "Colectivo LGTB+ de Madrid con recursos y acompanamiento",
-        "phone": "",
-        "email": "cogam@cogam.es",
+        "description": "Colectivo LGTBI+ de Madrid desde 1986. Información LGTB+, pruebas VIH, asesorías, talleres educativos.",
+        "phone": "91 523 00 70",
+        "email": "correo@cogam.es",
         "website": "https://cogam.es/"
       }
     ],
     "Comunitat Valenciana": [
       {
         "organization": "Lambda",
-        "description": "Colectivo LGTB+ de Valencia con atencion comunitaria",
-        "phone": "",
-        "email": "lambda@lambdavalencia.org",
+        "description": "Colectivo LGTB+ de Valencia. Servicio Orienta, atención psicológica, jurídica, pruebas VIH, grupos trans y familias.",
+        "phone": "963 342 191",
+        "email": "info@lambdavalencia.org",
         "website": "https://lambdavalencia.org/"
+      }
+    ],
+    "Extremadura": [
+      {
+        "organization": "Fundación Triángulo Extremadura",
+        "description": "Asesoría jurídica, psicológica, jóvenes y familias LGTBI. Sede en Badajoz.",
+        "phone": "924 260 528",
+        "email": "salud@fundaciontriangulo.es",
+        "website": "https://fundaciontriangulo.org/"
+      }
+    ],
+    "Galicia": [
+      {
+        "organization": "ALAS A Coruña",
+        "description": "Asociación LGTBI+ de A Coruña. Observatorio contra LGTBIfobia, formación, dinamización.",
+        "phone": "644 70 29 40",
+        "email": "info@alasacoruna.org",
+        "website": "https://alasacoruna.org/"
+      },
+      {
+        "organization": "Nós Mesmas",
+        "description": "Asociación feminista y transfeminista en Vigo. Orientación psicosocial y jurídica, juventud LGTBI+.",
+        "phone": "722 286 300",
+        "email": "nosmesmas@felgtbi.org",
+        "website": "https://nosmesmas.org/"
+      }
+    ],
+    "Islas Baleares": [
+      {
+        "organization": "Ben Amics",
+        "description": "Asociación LGTBI+ de les Illes Balears. SOIS (jóvenes), SAI LGTBI, formación y sensibilización.",
+        "phone": "608 366 869",
+        "email": "benamics@benamics.com",
+        "website": "https://benamics.com/"
+      }
+    ],
+    "La Rioja": [
+      {
+        "organization": "GYLDA LGTBI+",
+        "description": "Asociación LGTBI+ de La Rioja. Centro de recursos con orientación psicológica, jurídica y social.",
+        "phone": "941 640 280",
+        "email": "infolgtbi@gylda.org",
+        "website": "https://www.gylda.lgbt/"
+      }
+    ],
+    "Murcia": [
+      {
+        "organization": "No Te Prives",
+        "description": "Colectivo LGTBI+ de la Región de Murcia. Asesoría legal, psicosexual, familias, pruebas VIH, jóvenes.",
+        "phone": "683 195 874",
+        "email": "",
+        "website": "https://www.noteprives.es/"
+      }
+    ],
+    "Navarra": [
+      {
+        "organization": "Kattalingorri",
+        "description": "Asociación LGTBI+ de Navarra. Kattalingune: asesoría sexológica, jurídica, grupos de apoyo. Sedes en Pamplona, Tudela, Estella, Tafalla.",
+        "phone": "948 229 149",
+        "email": "kattalingune@kattalingune.org",
+        "website": "https://kattalingorri.org/"
+      }
+    ],
+    "País Vasco": [
+      {
+        "organization": "Gehitu",
+        "description": "Asociación LGTBI+ del País Vasco. Infasis (902 200 096), Berdindu. Delegaciones en Donostia, Bilbao, Vitoria.",
+        "phone": "943 46 85 16",
+        "email": "info@gehitu.org",
+        "website": "https://www.gehitu.org/"
       }
     ]
   }
 }
-
