@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -11,6 +11,7 @@ from uuid import uuid4
 import pandas as pd
 
 from utils import DataStoreError, get_logger
+from utils.datetime_utils import utc_now_iso
 
 from .privacy import VoicePrivacyService
 from .repository import ISO_DATE, StateRepository
@@ -37,11 +38,6 @@ def _parse_iso_date(value: str | None) -> date | None:
         return datetime.strptime(value, ISO_DATE).date()
     except ValueError:
         return None
-
-
-def _utc_now_iso() -> str:
-    """Current UTC timestamp as compact ISO string."""
-    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 @dataclass(frozen=True)
@@ -152,7 +148,7 @@ class AppService:
             next_psych_visit_date: Optional next psychology/specialist visit date.
         """
         state = self.repository.load()
-        now = _utc_now_iso()
+        now = utc_now_iso()
         state["profile"]["first_name"] = first_name.strip()
         state["profile"]["onboarding_completed"] = True
         state["profile"]["created_at"] = state["profile"].get("created_at") or now
@@ -179,7 +175,7 @@ class AppService:
         """Update profile and health settings from configuration UI."""
         state = self.repository.load()
         state["profile"]["first_name"] = first_name.strip()
-        state["profile"]["updated_at"] = _utc_now_iso()
+        state["profile"]["updated_at"] = utc_now_iso()
         self._update_health_fields(
             state=state,
             next_medication_date=next_medication_date,
@@ -274,7 +270,7 @@ class AppService:
         state["records"]["voice"].append(
             {
                 "id": uuid4().hex,
-                "recorded_at": _utc_now_iso(),
+                "recorded_at": utc_now_iso(),
                 "target_date": target_date.isoformat(),
                 "energy_rms": float(analysis.energy_rms),
                 "mood_auto": mood_auto,
@@ -470,7 +466,7 @@ class AppService:
                 or state["health_config"].get("medication_dose")
             ),
             "notes": self._normalize_optional_text(notes),
-            "created_at": _utc_now_iso(),
+            "created_at": utc_now_iso(),
         }
         state["records"]["medication"].append(record)
         if taken:
@@ -507,7 +503,7 @@ class AppService:
             "completed": bool(completed),
             "next_visit_date": next_visit_date if _parse_iso_date(next_visit_date) else None,
             "notes": self._normalize_optional_text(notes),
-            "created_at": _utc_now_iso(),
+            "created_at": utc_now_iso(),
         }
         state["records"]["visits"].append(record)
         if completed and record["next_visit_date"]:
@@ -542,7 +538,7 @@ class AppService:
                 "category": self._normalize_optional_text(category) or "general",
                 "tags": tags,
                 "notes": notes.strip(),
-                "created_at": _utc_now_iso(),
+                "created_at": utc_now_iso(),
             }
         )
         self.repository.save(state)
@@ -603,8 +599,8 @@ class AppService:
             "date": day_key,
             "shown_habits": list(shown_habits),
             "completed_habits": list(completed_habits),
-            "created_at": existing.get("created_at") if existing else _utc_now_iso(),
-            "updated_at": _utc_now_iso(),
+            "created_at": existing.get("created_at") if existing else utc_now_iso(),
+            "updated_at": utc_now_iso(),
         }
         if existing:
             existing.update(payload)

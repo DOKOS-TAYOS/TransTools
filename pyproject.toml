@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "transtools"
-version = "0.1.0"
+version = "0.2.0"
 description = "Desktop toolkit for transition support: voice, medication, habits and reports"
 readme = "README.md"
 license = {text = "MIT"}
@@ -26,7 +26,6 @@ classifiers = [
 dependencies = [
     "numpy>=2.0",
     "matplotlib>=3.10",
-    "scipy>=1.17",
     "pandas>=2.3",
     "sounddevice>=0.4.6",
     "librosa>=0.10.0",

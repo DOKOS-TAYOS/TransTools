@@ -87,7 +87,7 @@ def _validate_env_value(
         except (TypeError, ValueError, OverflowError):
             return False, default
 
-    if cast_type is str and key not in ("DONATIONS_URL",):
+    if cast_type is str:
         try:
             if not str(value).strip():
                 return False, default

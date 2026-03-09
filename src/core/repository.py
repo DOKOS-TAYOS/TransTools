@@ -6,12 +6,13 @@ import json
 import tempfile
 from copy import deepcopy
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
 from config.paths import get_data_file_path, get_output_dir
 from utils import DataStoreError, get_logger
+from utils.datetime_utils import utc_now_iso
 
 logger = get_logger(__name__)
 
@@ -30,11 +31,6 @@ class RepositoryPaths:
 
     state_file: Path
     legacy_file: Path
-
-
-def _utc_now_iso() -> str:
-    """Current UTC timestamp in ISO format."""
-    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _default_habit_catalog() -> list[dict[str, Any]]:
@@ -84,7 +80,7 @@ def default_state() -> dict[str, Any]:
     Returns:
         Default schema-compliant state dictionary.
     """
-    now = _utc_now_iso()
+    now = utc_now_iso()
     return {
         "schema_version": SCHEMA_VERSION,
         "created_at": now,
@@ -192,7 +188,7 @@ class StateRepository:
         Args:
             state: State dictionary.
         """
-        state["updated_at"] = _utc_now_iso()
+        state["updated_at"] = utc_now_iso()
         payload = json.dumps(state, ensure_ascii=False, indent=2)
         dst = self.paths.state_file
         try:

@@ -5,7 +5,6 @@ from .exceptions import (
     ConfigError,
     DataStoreError,
     RecordingError,
-    TransToolsError,
 )
 from .logging_config import get_logger, setup_logging
 
@@ -14,7 +13,6 @@ __all__ = [
     "ConfigError",
     "DataStoreError",
     "RecordingError",
-    "TransToolsError",
     "get_logger",
     "setup_logging",
 ]

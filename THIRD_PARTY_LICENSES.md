@@ -8,7 +8,6 @@ This project is distributed under the MIT License and uses the following third-p
 | --- | --- |
 | numpy | BSD-3-Clause (project metadata may omit explicit `License` field) |
 | pandas | BSD-3-Clause |
-| scipy | BSD-style (binary wheels may bundle OpenBLAS/LAPACK and GCC runtime exception) |
 | matplotlib | Matplotlib license (BSD-compatible) |
 | sounddevice | MIT |
 | librosa | ISC |
