@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """TransTools - Voice tracking application for transition follow-up."""
 
+import os
 import sys
 from pathlib import Path
 
@@ -81,8 +82,6 @@ def _config_callback(menu, app_service) -> None:
 
     if show_config_dialog(menu, app_service=app_service):
         menu.destroy()
-        import os
-
         os.execv(sys.executable, [sys.executable] + sys.argv)
 
 

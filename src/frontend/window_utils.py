@@ -23,7 +23,6 @@ def _get_window_decoration_size(window: Tk | Toplevel) -> tuple[int, int]:
 
 def place_window_centered(
     window: Tk | Toplevel,
-    preserve_size: bool = False,
     width: int | None = None,
     height: int | None = None,
 ) -> None:
@@ -31,7 +30,6 @@ def place_window_centered(
 
     Args:
         window: Tk or Toplevel window to center.
-        preserve_size: If True, only center when window has valid size (kept for API compatibility).
         width: Optional width in pixels. When set with height, geometry is applied as WxH+X+Y.
         height: Optional height in pixels. When set with width, geometry is applied as WxH+X+Y.
     """
