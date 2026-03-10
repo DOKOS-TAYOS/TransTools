@@ -52,7 +52,7 @@ def show_medication_dialog(parent, app_service=None) -> None:
     notes_text.grid(column=1, row=3, sticky="w", pady=3)
 
     status_var = StringVar(value="")
-    ttk.Label(frame, textvariable=status_var, wraplength=410).grid(
+    ttk.Label(frame, textvariable=status_var).grid(
         column=0, row=4, columnspan=2, sticky="w", pady=3
     )
 

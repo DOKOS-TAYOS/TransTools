@@ -33,3 +33,27 @@ def get_audio_dir() -> Path:
         Path to output/audio subdirectory.
     """
     return get_output_dir() / "audio"
+
+
+def get_patient_profile_path() -> Path:
+    """Path to patient static data (profile, health config, etc).
+
+    Returns:
+        Path to patient_profile.json in output dir.
+    """
+    return get_output_dir() / "patient_profile.json"
+
+
+def get_patient_history_path() -> Path:
+    """Path to patient historical records (voice, medication, visits, etc).
+
+    Returns:
+        Path to patient_history.json in output dir.
+    """
+    return get_output_dir() / "patient_history.json"
+
+
+def get_contacts_path() -> Path:
+    """Path to contacts JSON (app-level, in src)."""
+    base = Path(__file__).resolve().parent.parent
+    return base / "data" / "contacts.json"

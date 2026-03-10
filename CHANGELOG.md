@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- New modular core services with versioned JSON state (`trans_tools_state.json`) and atomic persistence.
+- New modular core services with split JSON storage:
+  - `patient_profile.json` (output): static patient data (name, health config, appointments, habit catalog).
+  - `patient_history.json` (output): historical records (voice, medication, visits, events, habits).
+  - `contacts.json` (src/data): support contacts (app-level, not in output).
 - First-run onboarding wizard (3 steps) with optional health setup fields.
 - New main menu structure with dedicated modules:
   - Voice log
@@ -28,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Export support for CSV, Excel, PDF, and PNG.
 - Linux scripts: `setup.sh`, `install.sh`, `bin/run.sh`.
 - Third-party license inventory (`THIRD_PARTY_LICENSES.md`).
-- Contacts seed dataset (`src/data/contacts_seed_es.json`).
+- Contacts dataset (`src/data/contacts.json`).
 - New dependencies: `tkcalendar`, `reportlab`, `cryptography`.
 
 ### Changed

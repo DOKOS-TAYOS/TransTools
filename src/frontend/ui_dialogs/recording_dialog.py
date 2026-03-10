@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from datetime import date, datetime
 from threading import Thread
 from tkinter import BooleanVar, IntVar, StringVar, Toplevel, messagebox, ttk
@@ -12,11 +13,12 @@ from config import UI_STYLE, get_audio_dir
 from config.env import get_env_from_schema
 from core.context import get_app_service
 from core.types import VoiceAnalysisResult
-from frontend.date_widgets import create_date_entry
 from frontend.input_widgets import create_spinbox
 from frontend.window_utils import place_window_centered
 from i18n import t
 from utils import AnalysisError, DataStoreError, RecordingError, get_logger
+
+RECORDING_SYMBOL = "\u25cf"  # ● (black circle, typical recording indicator)
 
 logger = get_logger(__name__)
 
@@ -77,9 +79,6 @@ def show_recording_dialog(parent, app_service=None) -> None:
     dlg.configure(background=UI_STYLE["bg"])
 
     app_service = app_service or get_app_service()
-    status_var = StringVar(value=t("recording.ready"))
-    result_var = StringVar(value="")
-    selected_date_label = StringVar(value=t("recording.for_date"))
     save_audio_default = bool(get_env_from_schema("SAVE_AUDIO"))
     save_audio_var = BooleanVar(value=save_audio_default)
 
@@ -87,55 +86,128 @@ def show_recording_dialog(parent, app_service=None) -> None:
     mood_sad_var = IntVar(value=2)
     mood_angry_var = IntVar(value=1)
 
-    frame = ttk.Frame(dlg, padding=UI_STYLE["padding"])
-    ttk.Label(frame, textvariable=status_var, wraplength=420).grid(
+    main_frame = ttk.Frame(dlg, padding=UI_STYLE["padding"])
+
+    # --- Ready view: options + record button ---
+    ready_frame = ttk.Frame(main_frame)
+    status_var = StringVar(value=t("recording.ready"))
+    ttk.Label(ready_frame, textvariable=status_var, wraplength=420).grid(
         column=0, row=0, columnspan=2, pady=4
     )
-    ttk.Label(frame, textvariable=result_var, wraplength=420).grid(
-        column=0, row=1, columnspan=2, pady=4
-    )
-
-    ttk.Label(frame, text=selected_date_label.get()).grid(
-        column=0,
-        row=2,
-        columnspan=2,
-        sticky="w",
-        pady=4,
-    )
-    date_entry = create_date_entry(frame, width=14)
-    date_entry.set_date(date.today())
-    date_entry.grid(column=0, row=3, columnspan=2, sticky="w", pady=(0, 4))
 
     ttk.Checkbutton(
-        frame,
+        ready_frame,
         text=t("recording.save_audio_now"),
         variable=save_audio_var,
-    ).grid(column=0, row=4, columnspan=2, sticky="w", pady=4)
+    ).grid(column=0, row=1, columnspan=2, sticky="w", pady=4)
 
-    ttk.Label(frame, text=t("recording.self_mood_title")).grid(
-        column=0,
-        row=5,
-        columnspan=2,
-        sticky="w",
+    ttk.Label(ready_frame, text=t("recording.self_mood_title")).grid(
+        column=0, row=2, columnspan=2, sticky="w"
     )
-    ttk.Label(frame, text=t("recording.self_happy")).grid(column=0, row=6, sticky="w", pady=2)
-    create_spinbox(frame, from_=0, to=5, width=5, textvariable=mood_happy_var).grid(
-        column=1,
-        row=6,
-        sticky="w",
+    ttk.Label(ready_frame, text=t("recording.self_happy")).grid(
+        column=0, row=3, sticky="w", pady=2
     )
-    ttk.Label(frame, text=t("recording.self_sad")).grid(column=0, row=7, sticky="w", pady=2)
-    create_spinbox(frame, from_=0, to=5, width=5, textvariable=mood_sad_var).grid(
-        column=1,
-        row=7,
-        sticky="w",
+    create_spinbox(ready_frame, from_=0, to=5, width=5, textvariable=mood_happy_var).grid(
+        column=1, row=3, sticky="w"
     )
-    ttk.Label(frame, text=t("recording.self_angry")).grid(column=0, row=8, sticky="w", pady=2)
-    create_spinbox(frame, from_=0, to=5, width=5, textvariable=mood_angry_var).grid(
-        column=1,
-        row=8,
-        sticky="w",
+    ttk.Label(ready_frame, text=t("recording.self_sad")).grid(
+        column=0, row=4, sticky="w", pady=2
     )
+    create_spinbox(ready_frame, from_=0, to=5, width=5, textvariable=mood_sad_var).grid(
+        column=1, row=4, sticky="w"
+    )
+    ttk.Label(ready_frame, text=t("recording.self_angry")).grid(
+        column=0, row=5, sticky="w", pady=2
+    )
+    create_spinbox(ready_frame, from_=0, to=5, width=5, textvariable=mood_angry_var).grid(
+        column=1, row=5, sticky="w"
+    )
+
+    record_btn = ttk.Button(
+        ready_frame,
+        text=t("recording.record"),
+        width=UI_STYLE["button_width"],
+    )
+    record_btn.grid(column=0, row=6, padx=4, pady=8)
+    close_btn = ttk.Button(
+        ready_frame, text=t("menu.close"), command=dlg.destroy, width=UI_STYLE["button_width"]
+    )
+    close_btn.grid(column=1, row=6, padx=4, pady=8)
+
+    # --- Recording view: only "Grabando" + symbol ---
+    recording_frame = ttk.Frame(main_frame)
+    recording_label = ttk.Label(
+        recording_frame,
+        text=f"{RECORDING_SYMBOL}  {t('recording.recording')}",
+        font=(UI_STYLE["font_family"], 14),
+    )
+    recording_label.pack(pady=16, padx=16)
+
+    recording_timer_active: dict[str, bool] = {"value": False}
+
+    # --- Completed view: message + path (if saved) + exit button ---
+    completed_frame = ttk.Frame(main_frame)
+    completed_label = ttk.Label(
+        completed_frame,
+        text=t("recording.completed"),
+        font=(UI_STYLE["font_family"], 14),
+    )
+    completed_label.pack(pady=(16, 8))
+    path_label = ttk.Label(completed_frame, text="", wraplength=380)
+    exit_btn = ttk.Button(
+        completed_frame,
+        text=t("menu.close"),
+        command=dlg.destroy,
+        width=UI_STYLE["button_width"],
+    )
+
+    pad = int(UI_STYLE["padding"])
+
+    def _resize_to_frame(frame: ttk.Frame) -> None:
+        def _do() -> None:
+            dlg.update_idletasks()
+            if not dlg.winfo_exists():
+                return
+            w = max(280, frame.winfo_reqwidth() + pad * 4)
+            h = max(120, frame.winfo_reqheight() + pad * 2)
+            dlg.geometry(f"{w}x{h}")
+
+        dlg.after_idle(_do)
+
+    def _show_ready() -> None:
+        recording_frame.pack_forget()
+        completed_frame.pack_forget()
+        ready_frame.pack(fill="both")
+        _resize_to_frame(ready_frame)
+
+    def _show_recording(msg: str) -> None:
+        ready_frame.pack_forget()
+        completed_frame.pack_forget()
+        recording_label.configure(text=f"{RECORDING_SYMBOL}  {msg}")
+        recording_frame.pack(fill="both")
+        _resize_to_frame(recording_frame)
+
+    def _update_recording_timer(start_time: float, total_sec: int) -> None:
+        if not recording_timer_active["value"] or not dlg.winfo_exists():
+            return
+        elapsed = int(time.time() - start_time)
+        elapsed = min(elapsed, total_sec)
+        txt = t("recording.progress", current=str(elapsed), total=str(total_sec))
+        recording_label.configure(text=f"{RECORDING_SYMBOL}  {t('recording.recording')}  {txt}")
+        if elapsed < total_sec and recording_timer_active["value"]:
+            dlg.after(1000, _update_recording_timer, start_time, total_sec)
+
+    def _show_completed(audio_path: str | None = None) -> None:
+        ready_frame.pack_forget()
+        recording_frame.pack_forget()
+        if audio_path:
+            path_label.configure(text=t("recording.audio_saved_at", path=audio_path))
+            path_label.pack(pady=(0, 12))
+        else:
+            path_label.pack_forget()
+        exit_btn.pack(pady=8)
+        completed_frame.pack(fill="both")
+        _resize_to_frame(completed_frame)
 
     is_busy = {"value": False}
 
@@ -145,23 +217,19 @@ def show_recording_dialog(parent, app_service=None) -> None:
         record_btn.configure(state=btn_state)
         close_btn.configure(state=btn_state)
 
-    def _finish_record(kind: str, payload: Any, target_date: date) -> None:
+    def _finish_record(
+        kind: str, payload: Any, target_date: date, audio_path: str | None = None
+    ) -> None:
         if not dlg.winfo_exists():
             return
         _set_busy(False)
 
         if kind == "ok":
-            now = datetime.now()
-            result_var.set(
-                t(
-                    "recording.result",
-                    datetime=now.strftime("%Y-%m-%d %H:%M"),
-                    date=target_date.isoformat(),
-                )
-            )
-            status_var.set(t("recording.saved_ok"))
+            _show_completed(audio_path=audio_path)
             return
 
+        recording_timer_active["value"] = False
+        _show_ready()
         if kind == "recording":
             messagebox.showerror(t("recording.error_recording"), str(payload))
             status_var.set(t("recording.error_recording_msg"))
@@ -187,7 +255,11 @@ def show_recording_dialog(parent, app_service=None) -> None:
         try:
             audio, sr = record_audio()
             if dlg.winfo_exists():
-                dlg.after(0, lambda: status_var.set(t("recording.analyzing")))
+                def _to_analyzing() -> None:
+                    recording_timer_active["value"] = False
+                    _show_recording(t("recording.analyzing"))
+
+                dlg.after(0, _to_analyzing)
             result: VoiceAnalysisResult = analyze_audio(audio, sr)
             audio_path = _save_audio(audio, sr, enabled=should_save_audio)
             app_service.add_voice_record(
@@ -197,7 +269,7 @@ def show_recording_dialog(parent, app_service=None) -> None:
                 audio_saved_path=audio_path or None,
             )
             if dlg.winfo_exists():
-                dlg.after(0, lambda: _finish_record("ok", None, target_date))
+                dlg.after(0, lambda p=audio_path: _finish_record("ok", None, target_date, p))
         except RecordingError as exc:
             if dlg.winfo_exists():
                 dlg.after(0, lambda err=exc: _finish_record("recording", err, target_date))
@@ -214,16 +286,17 @@ def show_recording_dialog(parent, app_service=None) -> None:
     def do_record() -> None:
         if is_busy["value"]:
             return
-        try:
-            target_date = date_entry.get_date()
-        except ValueError:
-            messagebox.showerror(t("recording.error_date"), t("recording.error_date_msg"))
-            status_var.set(t("recording.error_date_msg"))
-            return
+        target_date = date.today()
 
-        status_var.set(t("recording.recording"))
-        result_var.set("")
+        recording_timer_active["value"] = True
+        total_sec = int(get_env_from_schema("RECORD_DURATION_SEC"))
+        start_time = time.time()
+
+        _show_recording(t("recording.recording"))
+        status_var.set(t("recording.ready"))
         _set_busy(True)
+
+        dlg.after(0, _update_recording_timer, start_time, total_sec)
 
         mood_self = _build_self_mood_payload(
             mood_happy_var.get(),
@@ -237,19 +310,10 @@ def show_recording_dialog(parent, app_service=None) -> None:
         )
         worker.start()
 
-    record_btn = ttk.Button(
-        frame,
-        text=t("recording.record"),
-        command=do_record,
-        width=UI_STYLE["button_width"],
-    )
-    record_btn.grid(column=0, row=9, padx=4, pady=8)
-    close_btn = ttk.Button(
-        frame, text=t("menu.close"), command=dlg.destroy, width=UI_STYLE["button_width"]
-    )
-    close_btn.grid(column=1, row=9, padx=4, pady=8)
+    record_btn.configure(command=do_record)
 
-    frame.pack(fill="both")
+    _show_ready()
+    main_frame.pack(fill="both")
 
     def _on_close() -> None:
         if is_busy["value"]:
@@ -259,8 +323,7 @@ def show_recording_dialog(parent, app_service=None) -> None:
     dlg.protocol("WM_DELETE_WINDOW", _on_close)
     dlg.transient(parent)
     dlg.update_idletasks()
-    pad = int(UI_STYLE["padding"])
-    target_width = max(520, frame.winfo_reqwidth() + (pad * 4))
-    target_height = max(360, frame.winfo_reqheight() + (pad * 2))
+    target_width = max(400, ready_frame.winfo_reqwidth() + (pad * 4))
+    target_height = max(320, ready_frame.winfo_reqheight() + (pad * 2))
     dlg.minsize(target_width, target_height)
     place_window_centered(dlg, width=target_width, height=target_height)

@@ -13,6 +13,7 @@ import pandas as pd
 from utils import DataStoreError, get_logger
 from utils.datetime_utils import utc_now_iso
 
+from config.paths import get_contacts_path
 from .privacy import VoicePrivacyService
 from .repository import ISO_DATE, StateRepository
 from .types import VoiceAnalysisResult
@@ -62,35 +63,24 @@ class AppService:
         self,
         repository: StateRepository | None = None,
         privacy: VoicePrivacyService | None = None,
-        contacts_seed_path: Path | None = None,
+        contacts_path: Path | None = None,
     ) -> None:
         """Initialize service facade.
 
         Args:
             repository: Optional custom repository for tests.
             privacy: Optional privacy service.
-            contacts_seed_path: Optional contacts seed file path.
+            contacts_path: Optional contacts file path (default: src/data/contacts.json).
         """
         self.repository = repository or StateRepository()
         self.privacy = privacy or VoicePrivacyService()
-        if contacts_seed_path is None:
-            contacts_seed_path = (
-                Path(__file__).resolve().parent.parent / "data" / "contacts_seed_es.json"
-            )
-        self.contacts_seed_path = contacts_seed_path
+        self.contacts_path = contacts_path or get_contacts_path()
         self._initialize_state()
 
     def _initialize_state(self) -> None:
-        """Ensure state has required defaults and seeded data."""
+        """Ensure state has required defaults and migrate legacy voice entries."""
         state = self.repository.load()
         updated = False
-
-        contacts = state.get("contacts", {})
-        if not contacts.get("national") and not contacts.get("regional"):
-            seed = self._load_contacts_seed()
-            if seed:
-                state["contacts"] = seed
-                updated = True
 
         for entry in state["records"]["voice"]:
             if entry.get("tone_encrypted"):
@@ -102,22 +92,6 @@ class AppService:
 
         if updated:
             self.repository.save(state)
-
-    def _load_contacts_seed(self) -> dict[str, Any]:
-        """Load contacts seed from disk.
-
-        Returns:
-            Contacts dictionary with national and regional sections.
-        """
-        if not self.contacts_seed_path.exists():
-            return {"national": [], "regional": {}}
-        try:
-            import json
-
-            return json.loads(self.contacts_seed_path.read_text(encoding="utf-8"))
-        except Exception as exc:
-            logger.warning("Could not load contacts seed: %s", exc)
-            return {"national": [], "regional": {}}
 
     def get_state(self) -> dict[str, Any]:
         """Get current persisted state."""
@@ -236,8 +210,16 @@ class AppService:
         return self.repository.load()["health_config"]
 
     def get_contacts(self) -> dict[str, Any]:
-        """Get contacts by national and regional groups."""
-        return self.repository.load()["contacts"]
+        """Get contacts by national and regional groups (loads from src/data/contacts)."""
+        if not self.contacts_path.exists():
+            return {"national": [], "regional": {}}
+        try:
+            import json
+
+            return json.loads(self.contacts_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            logger.warning("Could not load contacts from %s: %s", self.contacts_path, exc)
+            return {"national": [], "regional": {}}
 
     def add_voice_record(
         self,

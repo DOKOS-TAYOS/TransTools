@@ -24,12 +24,14 @@ def app_service() -> AppService:
     output_dir = (ROOT / "output").resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     token = uuid4().hex
-    state_file = output_dir / f"state_{token}.json"
+    profile_file = output_dir / f"profile_{token}.json"
+    history_file = output_dir / f"history_{token}.json"
     legacy_file = output_dir / f"legacy_{token}.json"
     key_file = output_dir / f"voice_{token}.key"
     repo = StateRepository(
         RepositoryPaths(
-            state_file=state_file,
+            profile_file=profile_file,
+            history_file=history_file,
             legacy_file=legacy_file,
         )
     )
@@ -37,10 +39,10 @@ def app_service() -> AppService:
     service = AppService(
         repository=repo,
         privacy=privacy,
-        contacts_seed_path=ROOT / "src" / "data" / "contacts_seed_es.json",
+        contacts_path=ROOT / "src" / "data" / "contacts.json",
     )
     yield service
-    for path in (state_file, legacy_file, key_file):
+    for path in (profile_file, history_file, legacy_file, key_file):
         try:
             path.unlink(missing_ok=True)
         except Exception:

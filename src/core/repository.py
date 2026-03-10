@@ -10,7 +10,12 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
-from config.paths import get_data_file_path, get_output_dir
+from config.paths import (
+    get_data_file_path,
+    get_output_dir,
+    get_patient_history_path,
+    get_patient_profile_path,
+)
 from utils import DataStoreError, get_logger
 from utils.datetime_utils import utc_now_iso
 
@@ -25,11 +30,13 @@ class RepositoryPaths:
     """File paths used by the repository.
 
     Attributes:
-        state_file: Main versioned state JSON file.
-        legacy_file: Previous voice-focused JSON file.
+        profile_file: Patient static data (name, health config, appointments, etc).
+        history_file: Patient historical records (voice, medication, visits, etc).
+        legacy_file: Previous voice-focused JSON file for bootstrap.
     """
 
-    state_file: Path
+    profile_file: Path
+    history_file: Path
     legacy_file: Path
 
 
@@ -271,12 +278,8 @@ def _merge_habit_catalog(
     return result
 
 
-def default_state() -> dict[str, Any]:
-    """Create a new default state object.
-
-    Returns:
-        Default schema-compliant state dictionary.
-    """
+def default_profile_state() -> dict[str, Any]:
+    """Default patient static data (profile, health config, meta, habit catalog)."""
     now = utc_now_iso()
     return {
         "schema_version": SCHEMA_VERSION,
@@ -295,15 +298,7 @@ def default_state() -> dict[str, Any]:
             "next_medical_visit_date": None,
             "next_psych_visit_date": None,
         },
-        "records": {
-            "voice": [],
-            "medication": [],
-            "visits": [],
-            "other_events": [],
-            "habits": [],
-        },
         "habit_catalog": _default_habit_catalog(),
-        "contacts": {"national": [], "regional": {}},
         "meta": {
             "last_habit_count": 3,
             "help_shown": False,
@@ -311,19 +306,35 @@ def default_state() -> dict[str, Any]:
     }
 
 
+def default_history_state() -> dict[str, Any]:
+    """Default patient historical records."""
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "records": {
+            "voice": [],
+            "medication": [],
+            "visits": [],
+            "other_events": [],
+            "habits": [],
+        },
+    }
+
+
+def default_state() -> dict[str, Any]:
+    """Create merged default state (profile + history)."""
+    profile = default_profile_state()
+    history = default_history_state()
+    return {
+        **profile,
+        "records": history["records"],
+    }
+
+
 def _deep_merge_defaults(
     base: dict[str, Any],
     default: dict[str, Any],
 ) -> dict[str, Any]:
-    """Merge missing keys from defaults recursively.
-
-    Args:
-        base: Existing state.
-        default: Default state.
-
-    Returns:
-        Merged state dictionary.
-    """
+    """Merge missing keys from defaults recursively."""
     merged = deepcopy(base)
     for key, value in default.items():
         if key not in merged:
@@ -343,8 +354,28 @@ def _safe_json_load(path: Path) -> dict[str, Any]:
         raise DataStoreError(f"No se pudo cargar el estado: {exc}") from exc
 
 
+def _atomic_save(path: Path, data: dict[str, Any]) -> None:
+    """Persist JSON atomically."""
+    payload = json.dumps(data, ensure_ascii=False, indent=2)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            delete=False,
+            dir=str(path.parent),
+            encoding="utf-8",
+            suffix=".tmp",
+        ) as handle:
+            handle.write(payload)
+            tmp_name = handle.name
+        Path(tmp_name).replace(path)
+    except Exception as exc:
+        logger.exception("Atomic save failed: %s", exc)
+        raise DataStoreError(f"No se pudo guardar: {exc}") from exc
+
+
 class StateRepository:
-    """Versioned JSON repository with atomic writes."""
+    """Versioned JSON repository with split profile/history storage."""
 
     def __init__(self, paths: RepositoryPaths | None = None) -> None:
         """Initialize repository.
@@ -355,67 +386,83 @@ class StateRepository:
         if paths is None:
             out_dir = get_output_dir()
             paths = RepositoryPaths(
-                state_file=(out_dir / "trans_tools_state.json"),
+                profile_file=get_patient_profile_path(),
+                history_file=get_patient_history_path(),
                 legacy_file=get_data_file_path(),
             )
         self.paths = paths
-        self.paths.state_file.parent.mkdir(parents=True, exist_ok=True)
+        self.paths.profile_file.parent.mkdir(parents=True, exist_ok=True)
+        self.paths.history_file.parent.mkdir(parents=True, exist_ok=True)
 
     def load(self) -> dict[str, Any]:
-        """Load state from disk, creating it if needed.
+        """Load state from disk (profile + history merged), creating if needed.
 
         Returns:
-            State dictionary.
+            Merged state dictionary (profile + records).
         """
-        if not self.paths.state_file.exists():
+        profile_exists = self.paths.profile_file.exists()
+        history_exists = self.paths.history_file.exists()
+
+        if not profile_exists and not history_exists:
             state = default_state()
             state = self._apply_legacy_bootstrap_if_available(state)
             self.save(state)
             return state
 
-        raw = _safe_json_load(self.paths.state_file)
-        migrated = self._migrate(raw)
-        if migrated != raw:
-            self.save(migrated)
-        return migrated
+        profile = (
+            _safe_json_load(self.paths.profile_file)
+            if profile_exists
+            else default_profile_state()
+        )
+        history = (
+            _safe_json_load(self.paths.history_file)
+            if history_exists
+            else default_history_state()
+        )
+
+        profile = self._migrate_profile(profile)
+        history = self._migrate_history(history)
+
+        merged = {
+            **profile,
+            "records": history["records"],
+        }
+        return merged
 
     def save(self, state: dict[str, Any]) -> None:
-        """Persist state atomically.
+        """Persist state atomically (splits into profile and history files).
 
         Args:
-            state: State dictionary.
+            state: Full state dictionary.
         """
-        state["updated_at"] = utc_now_iso()
-        payload = json.dumps(state, ensure_ascii=False, indent=2)
-        dst = self.paths.state_file
-        try:
-            with tempfile.NamedTemporaryFile(
-                mode="w",
-                delete=False,
-                dir=str(dst.parent),
-                encoding="utf-8",
-                suffix=".tmp",
-            ) as handle:
-                handle.write(payload)
-                tmp_name = handle.name
-            Path(tmp_name).replace(dst)
-        except Exception as exc:
-            logger.exception("Atomic save failed: %s", exc)
-            raise DataStoreError(f"No se pudo guardar el estado: {exc}") from exc
+        now = utc_now_iso()
 
-    def _migrate(self, state: dict[str, Any]) -> dict[str, Any]:
-        """Apply lightweight migrations to current schema.
+        profile = {
+            "schema_version": state.get("schema_version", SCHEMA_VERSION),
+            "created_at": state.get("created_at", now),
+            "updated_at": now,
+            "profile": state.get("profile", default_profile_state()["profile"]),
+            "health_config": state.get(
+                "health_config", default_profile_state()["health_config"]
+            ),
+            "habit_catalog": state.get(
+                "habit_catalog", default_profile_state()["habit_catalog"]
+            ),
+            "meta": state.get("meta", default_profile_state()["meta"]),
+        }
+        _atomic_save(self.paths.profile_file, profile)
 
-        Args:
-            state: Raw loaded state.
+        history = {
+            "schema_version": state.get("schema_version", SCHEMA_VERSION),
+            "records": state.get("records", default_history_state()["records"]),
+        }
+        _atomic_save(self.paths.history_file, history)
 
-        Returns:
-            Migrated state.
-        """
-        if not isinstance(state, dict):
-            logger.warning("Invalid state format found; resetting to defaults")
-            return default_state()
-        current = _deep_merge_defaults(state, default_state())
+    def _migrate_profile(self, raw: dict[str, Any]) -> dict[str, Any]:
+        """Apply migrations to profile data."""
+        if not isinstance(raw, dict):
+            return default_profile_state()
+        current = _deep_merge_defaults(raw, default_profile_state())
         current["schema_version"] = SCHEMA_VERSION
         current["habit_catalog"] = _merge_habit_catalog(
             current.get("habit_catalog", []),
@@ -423,15 +470,16 @@ class StateRepository:
         )
         return current
 
+    def _migrate_history(self, raw: dict[str, Any]) -> dict[str, Any]:
+        """Apply migrations to history data."""
+        if not isinstance(raw, dict):
+            return default_history_state()
+        current = _deep_merge_defaults(raw, default_history_state())
+        current["schema_version"] = SCHEMA_VERSION
+        return current
+
     def _apply_legacy_bootstrap_if_available(self, state: dict[str, Any]) -> dict[str, Any]:
-        """Bootstrap from legacy voice JSON if present.
-
-        Args:
-            state: Fresh default state.
-
-        Returns:
-            Updated state with imported voice records if possible.
-        """
+        """Bootstrap from legacy voice JSON if present."""
         legacy = self.paths.legacy_file
         if not legacy.exists():
             return state

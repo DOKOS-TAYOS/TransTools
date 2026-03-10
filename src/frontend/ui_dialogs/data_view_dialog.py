@@ -140,6 +140,8 @@ def _build_calendar_tab(parent, app_service) -> None:
         summary = app_service.get_daily_summary(day)
         for item in details.get_children():
             details.delete(item)
+        empty = t("data.no_value")
+
         details.insert("", "end", values=(t("data.date"), summary["date"]))
         details.insert(
             "",
@@ -171,12 +173,60 @@ def _build_calendar_tab(parent, app_service) -> None:
             "end",
             values=(t("data.medication_entries"), len(summary["medication"])),
         )
+        for i, med in enumerate(summary["medication"], 1):
+            dose_val = (med.get("dose") or "").strip() or empty
+            hour_val = (med.get("hour") or "").strip() or empty
+            notes_val = (med.get("notes") or "").strip() or empty
+            med_label = t("data.medication_item", n=str(i))
+            details.insert(
+                "",
+                "end",
+                values=(f"  {med_label} ({t('data.medication_dose')})", dose_val),
+            )
+            if hour_val != empty:
+                details.insert(
+                    "",
+                    "end",
+                    values=(f"  {med_label} ({t('data.medication_hour')})", hour_val),
+                )
+            if notes_val != empty:
+                details.insert(
+                    "",
+                    "end",
+                    values=(f"  {med_label} ({t('data.medication_notes')})", notes_val),
+                )
         details.insert("", "end", values=(t("data.visit_entries"), len(summary["visits"])))
+        for i, v in enumerate(summary["visits"], 1):
+            vtype = (
+                t("data.visit_type_medical")
+                if v.get("visit_type") == "medical"
+                else t("data.visit_type_psychology")
+            )
+            notes_val = (v.get("notes") or "").strip() or empty
+            visit_label = t("data.visit_item", n=str(i))
+            details.insert("", "end", values=(f"  {visit_label}", vtype))
+            if notes_val != empty:
+                details.insert(
+                    "",
+                    "end",
+                    values=(f"  {visit_label} ({t('data.visit_notes')})", notes_val),
+                )
         details.insert(
             "",
             "end",
             values=(t("data.event_entries"), len(summary["other_events"])),
         )
+        for i, ev in enumerate(summary["other_events"], 1):
+            notes_val = (ev.get("notes") or "").strip() or empty
+            cat = (ev.get("category") or "general").strip()
+            event_label = t("data.event_item", n=str(i))
+            details.insert("", "end", values=(f"  {event_label}", cat))
+            if notes_val != empty:
+                details.insert(
+                    "",
+                    "end",
+                    values=(f"  {event_label} ({t('data.event_notes')})", notes_val),
+                )
         details.insert("", "end", values=(t("data.habit_entries"), len(summary["habits"])))
 
     try:
