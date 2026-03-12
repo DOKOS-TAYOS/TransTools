@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
-from tkinter import StringVar, Text, Toplevel, messagebox, ttk
+from tkinter import BooleanVar, StringVar, Text, Toplevel, messagebox, ttk
 
 from config import UI_STYLE
 from core.context import get_app_service
@@ -33,6 +33,7 @@ def show_medication_dialog(parent, app_service=None) -> None:
 
     hour_var = StringVar(value="")
     dose_var = StringVar(value=health.get("medication_dose") or "")
+    select_next_var = BooleanVar(value=False)
 
     frame = ttk.Frame(dlg, padding=UI_STYLE["padding"])
     ttk.Label(frame, text=t("medication.date")).grid(column=0, row=0, sticky="w", pady=3)
@@ -40,30 +41,54 @@ def show_medication_dialog(parent, app_service=None) -> None:
     date_entry.set_date(date.today())
     date_entry.grid(column=1, row=0, sticky="w", pady=3)
 
-    ttk.Label(frame, text=t("medication.hour")).grid(column=0, row=1, sticky="w", pady=3)
-    create_entry(frame, textvariable=hour_var, width=14).grid(column=1, row=1, sticky="w", pady=3)
+    def _toggle_next_date() -> None:
+        if select_next_var.get():
+            next_entry.grid(column=1, row=0, padx=(8, 0))
+        else:
+            next_entry.widget.grid_remove()
 
-    ttk.Label(frame, text=t("medication.dose")).grid(column=0, row=2, sticky="w", pady=3)
-    create_entry(frame, textvariable=dose_var, width=22).grid(column=1, row=2, sticky="w", pady=3)
+    next_date_frame = ttk.Frame(frame)
+    next_date_frame.grid(column=0, row=1, columnspan=2, sticky="w", pady=3)
+    ttk.Checkbutton(
+        next_date_frame,
+        text=t("medication.select_next_date"),
+        variable=select_next_var,
+        command=_toggle_next_date,
+    ).grid(column=0, row=0)
+    next_entry = create_date_entry(next_date_frame, width=14)
+    next_entry.set_date(date.today())
+    _toggle_next_date()
 
-    ttk.Label(frame, text=t("medication.notes")).grid(column=0, row=3, sticky="nw", pady=3)
+    ttk.Label(frame, text=t("medication.hour")).grid(column=0, row=2, sticky="w", pady=3)
+    create_entry(frame, textvariable=hour_var, width=14).grid(column=1, row=2, sticky="w", pady=3)
+
+    ttk.Label(frame, text=t("medication.dose")).grid(column=0, row=3, sticky="w", pady=3)
+    create_entry(frame, textvariable=dose_var, width=22).grid(column=1, row=3, sticky="w", pady=3)
+
+    ttk.Label(frame, text=t("medication.notes")).grid(column=0, row=4, sticky="nw", pady=3)
     notes_text = Text(frame, width=34, height=5)
     configure_notes_widget(notes_text)
-    notes_text.grid(column=1, row=3, sticky="w", pady=3)
+    notes_text.grid(column=1, row=4, sticky="w", pady=3)
 
     status_var = StringVar(value="")
     ttk.Label(frame, textvariable=status_var).grid(
-        column=0, row=4, columnspan=2, sticky="w", pady=3
+        column=0, row=5, columnspan=2, sticky="w", pady=3
     )
 
     def _save() -> None:
         try:
+            wants_next = select_next_var.get()
+            next_date: str | None = (
+                next_entry.get_date().isoformat() if wants_next else None
+            )
             app_service.add_medication_record(
                 target_date=date_entry.get_date(),
                 taken=True,
                 hour=hour_var.get().strip() or None,
                 dose=dose_var.get().strip() or None,
                 notes=notes_text.get("1.0", "end").strip() or None,
+                next_medication_date=next_date,
+                update_next_date=wants_next,
             )
             status_var.set(t("medication.saved"))
         except ValueError:
@@ -75,11 +100,11 @@ def show_medication_dialog(parent, app_service=None) -> None:
             messagebox.showerror(t("error.generic"), str(exc))
 
     ttk.Button(frame, text=t("common.save"), command=_save, width=UI_STYLE["button_width"]).grid(
-        column=0, row=5, padx=4, pady=8
+        column=0, row=6, padx=4, pady=8
     )
     ttk.Button(
         frame, text=t("menu.close"), command=dlg.destroy, width=UI_STYLE["button_width"]
-    ).grid(column=1, row=5, padx=4, pady=8)
+    ).grid(column=1, row=6, padx=4, pady=8)
 
     frame.pack(fill="both")
     dlg.transient(parent)

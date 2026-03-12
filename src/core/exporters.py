@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
@@ -82,7 +83,6 @@ def export_to_pdf(
     weekly = frames.get("voz_semanal", pd.DataFrame())
     medication = frames.get("medicacion", pd.DataFrame())
     visits = frames.get("visitas", pd.DataFrame())
-    habits = frames.get("habitos", pd.DataFrame())
 
     try:
         doc = SimpleDocTemplate(str(destination), pagesize=A4)
@@ -99,23 +99,28 @@ def export_to_pdf(
 
         who = profile_name.strip() if profile_name else t("export.pdf.default_user")
         story.append(Paragraph(t("export.pdf.title", name=who), title_style))
-        story.append(Paragraph(t("export.pdf.subtitle"), styles["Normal"]))
         story.append(Spacer(1, 12))
 
         story.append(Paragraph(t("export.pdf.section_voice"), styles["Heading3"]))
-        story.extend(_table_or_empty_message(weekly, max_rows=8))
+        story.extend(_table_or_empty_message(weekly, max_rows=8, section="voice"))
         story.append(Spacer(1, 10))
 
         story.append(Paragraph(t("export.pdf.section_medication"), styles["Heading3"]))
-        story.extend(_table_or_empty_message(medication, max_rows=10))
+        story.extend(_table_or_empty_message(medication, max_rows=10, section="medication"))
         story.append(Spacer(1, 10))
 
         story.append(Paragraph(t("export.pdf.section_visits"), styles["Heading3"]))
-        story.extend(_table_or_empty_message(visits, max_rows=10))
-        story.append(Spacer(1, 10))
+        story.extend(_table_or_empty_message(visits, max_rows=10, section="visits"))
 
-        story.append(Paragraph(t("export.pdf.section_habits"), styles["Heading3"]))
-        story.extend(_table_or_empty_message(habits, max_rows=10))
+        story.append(Spacer(1, 14))
+        story.append(Paragraph(t("export.pdf.section_chart"), styles["Heading3"]))
+        chart_img = _build_tone_chart_image(weekly)
+        if chart_img is not None:
+            from reportlab.platypus import Image as RlImage
+
+            story.append(RlImage(chart_img, width=450, height=240))
+        else:
+            story.append(Paragraph(t("export.table.no_data"), styles["Italic"]))
 
         doc.build(story)
     except Exception as exc:
@@ -123,7 +128,73 @@ def export_to_pdf(
         raise DataStoreError(f"No se pudo exportar PDF: {exc}") from exc
 
 
-def _table_or_empty_message(frame: pd.DataFrame, max_rows: int) -> list[Any]:
+def _build_tone_chart_image(weekly: pd.DataFrame) -> BytesIO | None:
+    """Build tone evolution chart as PNG bytes for PDF embedding."""
+    if weekly.empty:
+        return None
+    weekly = weekly.sort_values("week_start").copy()
+    fig: Figure | None = None
+    try:
+        fig, ax = plt.subplots(figsize=(6, 3.2), dpi=100)
+        ax.plot(weekly["week_start"], weekly["pitch_mean_hz"], marker="o", color="#2c5f7a")
+        ax.set_title(t("export.png.title"))
+        ax.set_xlabel(t("export.png.xlabel"))
+        ax.set_ylabel(t("export.png.ylabel"))
+        ax.tick_params(axis="x", rotation=45)
+        ax.grid(alpha=0.2)
+        fig.tight_layout()
+        buf = BytesIO()
+        fig.savefig(buf, format="png", dpi=100)
+        buf.seek(0)
+        return buf
+    finally:
+        if fig is not None:
+            plt.close(fig)
+
+
+def _prepare_pdf_table(frame: pd.DataFrame, section: str) -> pd.DataFrame:
+    """Prepare dataframe for PDF: drop cols, rename, round, replace nan."""
+    df = frame.copy()
+    drop_cols = {"id", "created_at", "taken", "completed"}
+    for c in drop_cols:
+        if c in df.columns:
+            df = df.drop(columns=[c])
+
+    if section == "voice":
+        rename = {
+            "week_start": "Semana",
+            "samples": "N",
+            "pitch_mean_hz": "Pitch (Hz)",
+            "pitch_min_hz": "Min",
+            "pitch_max_hz": "Max",
+            "pitch_std_hz": "σ",
+            "energy_rms": "Energía",
+            "mood_happy": "Feliz",
+            "mood_sad": "Triste",
+            "mood_angry": "Enfado",
+        }
+        df = df.rename(columns={k: v for k, v in rename.items() if k in df.columns})
+        for col in df.select_dtypes(include=["number"]).columns:
+            df[col] = df[col].round(1)
+    elif section == "medication":
+        rename = {"date": "Fecha", "hour": "Hora", "dose": "Dosis", "notes": "Notas"}
+        df = df.rename(columns={k: v for k, v in rename.items() if k in df.columns})
+    elif section == "visits":
+        rename = {
+            "date": "Fecha",
+            "visit_type": "Tipo",
+            "next_visit_date": "Próx.",
+            "notes": "Notas",
+        }
+        df = df.rename(columns={k: v for k, v in rename.items() if k in df.columns})
+
+    df = df.fillna("Ninguna")
+    return df
+
+
+def _table_or_empty_message(
+    frame: pd.DataFrame, max_rows: int, section: str = "generic"
+) -> list[Any]:
     """Build reportlab elements for a dataframe section."""
     from reportlab.lib import colors
     from reportlab.lib.styles import getSampleStyleSheet
@@ -133,7 +204,7 @@ def _table_or_empty_message(frame: pd.DataFrame, max_rows: int) -> list[Any]:
     if frame.empty:
         return [Paragraph(t("export.table.no_data"), styles["Italic"])]
 
-    subset = frame.head(max_rows).copy()
+    subset = _prepare_pdf_table(frame.head(max_rows), section)
     cols = list(subset.columns)
     data = [cols] + subset.astype(str).values.tolist()
     table = Table(data, repeatRows=1)

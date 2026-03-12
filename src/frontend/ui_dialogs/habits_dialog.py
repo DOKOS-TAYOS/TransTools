@@ -36,7 +36,7 @@ def show_habits_dialog(parent, app_service=None) -> None:
     date_entry.grid(column=1, row=0, sticky="w", pady=4)
 
     hint_var = StringVar(value=t("habits.hint"))
-    ttk.Label(frame, textvariable=hint_var, wraplength=540).grid(
+    ttk.Label(frame, textvariable=hint_var, wraplength=680).grid(
         column=0, row=1, columnspan=2, sticky="w", pady=4
     )
 
@@ -45,7 +45,7 @@ def show_habits_dialog(parent, app_service=None) -> None:
 
     row_vars: dict[str, BooleanVar] = {}
     status_var = StringVar(value="")
-    ttk.Label(frame, textvariable=status_var, wraplength=540).grid(
+    ttk.Label(frame, textvariable=status_var, wraplength=680).grid(
         column=0, row=3, columnspan=2, sticky="w", pady=4
     )
 

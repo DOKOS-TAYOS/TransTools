@@ -14,7 +14,7 @@ def create_collapsible_section(
     parent: ttk.Frame,
     title: str,
     content: str,
-    wraplength: int = 620,
+    wraplength: int = 780,
     initially_expanded: bool = True,
 ) -> ttk.Frame:
     """Create a collapsible section with title and body content."""

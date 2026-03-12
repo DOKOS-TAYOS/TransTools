@@ -73,7 +73,7 @@ def create_main_menu(
     logo_label = None
     if logo_image is not None:
         logo_label = ttk.Label(main_frame, image=logo_image)
-    welcome = ttk.Label(main_frame, text=t("menu.welcome"), wraplength=460, justify="center")
+    welcome = ttk.Label(main_frame, text=t("menu.welcome"), wraplength=620, justify="center")
     version_label = ttk.Label(main_frame, text=f"v{__version__}")
 
     btn_width = max(UI_STYLE["button_width_wide"], 24)

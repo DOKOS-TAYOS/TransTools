@@ -435,6 +435,8 @@ class AppService:
         hour: str | None,
         dose: str | None,
         notes: str | None,
+        next_medication_date: str | None = None,
+        update_next_date: bool = True,
     ) -> None:
         """Save medication log for a day."""
         state = self.repository.load()
@@ -453,11 +455,16 @@ class AppService:
         state["records"]["medication"].append(record)
         if taken:
             cfg = state["health_config"]
-            period = cfg.get("medication_every_days")
-            if period:
-                cfg["next_medication_date"] = (
-                    target_date + timedelta(days=int(period))
-                ).isoformat()
+            if not update_next_date:
+                pass
+            elif next_medication_date and _parse_iso_date(next_medication_date):
+                cfg["next_medication_date"] = next_medication_date
+            else:
+                period = cfg.get("medication_every_days")
+                if period:
+                    cfg["next_medication_date"] = (
+                        target_date + timedelta(days=int(period))
+                    ).isoformat()
         self.repository.save(state)
 
     def list_medication_records(self) -> list[dict[str, Any]]:
@@ -488,7 +495,7 @@ class AppService:
             "created_at": utc_now_iso(),
         }
         state["records"]["visits"].append(record)
-        if completed and record["next_visit_date"]:
+        if completed:
             if visit_type == "medical":
                 state["health_config"]["next_medical_visit_date"] = record["next_visit_date"]
             else:
@@ -760,8 +767,16 @@ class AppService:
             tags.setdefault(day_key, set()).add("habit")
         return tags
 
-    def to_export_frames(self) -> dict[str, pd.DataFrame]:
+    def to_export_frames(
+        self,
+        date_from: date | None = None,
+        date_to: date | None = None,
+    ) -> dict[str, pd.DataFrame]:
         """Build export dataframes with privacy policy applied.
+
+        Args:
+            date_from: Optional start date for filtering (inclusive).
+            date_to: Optional end date for filtering (inclusive).
 
         Returns:
             Dictionary of sheet name to DataFrame.
@@ -769,7 +784,32 @@ class AppService:
         state = self.repository.load()
         snapshot = self._build_state_snapshot(state)
 
-        weekly_voice_rows = self._hydrate_voice_rows(snapshot["voice"], include_sensitive=True)
+        def _in_range(day_key: str) -> bool:
+            if date_from is None and date_to is None:
+                return True
+            parsed = _parse_iso_date(day_key)
+            if parsed is None:
+                return False
+            if date_from is not None and parsed < date_from:
+                return False
+            if date_to is not None and parsed > date_to:
+                return False
+            return True
+
+        voice_rows = snapshot["voice"]
+        if date_from is not None or date_to is not None:
+            voice_rows = [r for r in voice_rows if _in_range(r.get("target_date", ""))]
+            snapshot = dict(snapshot)
+            snapshot["medication"] = [r for r in snapshot["medication"] if _in_range(r.get("date", ""))]
+            snapshot["visits"] = [r for r in snapshot["visits"] if _in_range(r.get("date", ""))]
+            snapshot["events"] = [
+                r for r in snapshot["events"]
+                if _in_range(r.get("date", ""))
+            ]
+            snapshot["habits"] = [r for r in snapshot["habits"] if _in_range(r.get("date", ""))]
+            snapshot["all_dates"] = [k for k in snapshot["all_dates"] if _in_range(k)]
+
+        weekly_voice_rows = self._hydrate_voice_rows(voice_rows, include_sensitive=True)
         weekly_voice = pd.DataFrame(self._build_weekly_voice_summary(weekly_voice_rows))
         if weekly_voice.empty:
             weekly_voice = pd.DataFrame(

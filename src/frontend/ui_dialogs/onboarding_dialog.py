@@ -59,7 +59,7 @@ def show_onboarding_dialog(parent, app_service=None) -> bool:
     welcome_body_label = ttk.Label(
         s1,
         text=t("onboarding.welcome_body"),
-        wraplength=560,
+        wraplength=680,
         justify="left",
     )
     welcome_body_label.pack(anchor="w", fill="x")
@@ -67,7 +67,7 @@ def show_onboarding_dialog(parent, app_service=None) -> bool:
     help_body_label = ttk.Label(
         s1,
         text=t("onboarding.help_body"),
-        wraplength=560,
+        wraplength=680,
         justify="left",
     )
     help_body_label.pack(anchor="w", fill="x")
@@ -163,11 +163,11 @@ def show_onboarding_dialog(parent, app_service=None) -> bool:
     s3 = ttk.Frame(body)
     summary_var = StringVar(value="")
     ttk.Label(s3, text=t("onboarding.summary_title")).pack(anchor="w", pady=(0, 6))
-    ttk.Label(s3, textvariable=summary_var, wraplength=560, justify="left").pack(anchor="w")
+    ttk.Label(s3, textvariable=summary_var, wraplength=680, justify="left").pack(anchor="w")
     ttk.Label(
         s3,
         textvariable=status_var,
-        wraplength=560,
+        wraplength=680,
         justify="left",
     ).pack(anchor="w", pady=(8, 0))
     steps.append(s3)

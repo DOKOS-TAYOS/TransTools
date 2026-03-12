@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import gc
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
+from typing import Any
 from pathlib import Path
-from tkinter import Toplevel, filedialog, messagebox, ttk
+from tkinter import IntVar, StringVar, Toplevel, filedialog, messagebox, ttk
 
 import matplotlib
 
@@ -38,6 +39,9 @@ def show_data_view_dialog(parent, app_service=None) -> None:
     dlg.title(t("menu.view_data"))
     dlg.resizable(width=True, height=True)
     dlg.configure(background=UI_STYLE["bg"])
+    dlg.minsize(1100, 700)
+    dlg.transient(parent)
+    place_window_centered(dlg, width=1280, height=860)
 
     fig: Figure | None = None
     canvas = None
@@ -60,6 +64,10 @@ def show_data_view_dialog(parent, app_service=None) -> None:
 
     dlg.protocol("WM_DELETE_WINDOW", _on_close)
 
+    btn_frame = ttk.Frame(dlg)
+    btn_frame.pack(side="bottom", fill="x", padx=UI_STYLE["padding"], pady=(0, UI_STYLE["padding"]))
+    ttk.Button(btn_frame, text=t("menu.close"), command=_on_close).pack(side="right")
+
     notebook = ttk.Notebook(dlg)
     notebook.pack(
         fill="both",
@@ -68,12 +76,15 @@ def show_data_view_dialog(parent, app_service=None) -> None:
         pady=UI_STYLE["padding"],
     )
 
+    user_tab = ttk.Frame(notebook, padding=6)
     calendar_tab = ttk.Frame(notebook, padding=UI_STYLE["padding"])
     chart_tab = ttk.Frame(notebook, padding=UI_STYLE["padding"])
 
+    notebook.add(user_tab, text=t("config.tab_user"))
     notebook.add(calendar_tab, text=t("data.tab_calendar"))
     notebook.add(chart_tab, text=t("data.tab_weekly"))
 
+    _build_user_tab(user_tab, app_service)
     _build_calendar_tab(calendar_tab, app_service)
 
     weekly = pd.DataFrame(app_service.get_weekly_voice_summary())
@@ -95,10 +106,118 @@ def show_data_view_dialog(parent, app_service=None) -> None:
     canvas.draw()
     canvas.get_tk_widget().pack(fill="both", expand=True)
 
-    ttk.Button(dlg, text=t("menu.close"), command=_on_close).pack(pady=8)
-    dlg.transient(parent)
-    dlg.minsize(760, 700)
-    place_window_centered(dlg, width=980, height=860)
+    def _fix_geometry() -> None:
+        dlg.update_idletasks()
+        place_window_centered(dlg, width=1280, height=860)
+
+    dlg.after(50, _fix_geometry)
+
+
+def _parse_iso_date_or_today(value: str | None) -> date:
+    """Parse ISO date string or return today if empty/invalid."""
+    if not value or not value.strip():
+        return date.today()
+    try:
+        return datetime.strptime(value.strip(), "%Y-%m-%d").date()
+    except ValueError:
+        return date.today()
+
+
+def _build_user_tab(parent, app_service) -> None:
+    """Build user info tab (profile and health settings)."""
+    content = ttk.Frame(parent)
+    content.pack(anchor="n", fill="x", expand=False)
+
+    profile = app_service.get_profile()
+    health = app_service.get_health_config()
+    _font = (UI_STYLE["font_family"], UI_STYLE["font_size"])
+    pad = 4
+
+    first_name_var = StringVar(value=profile.get("first_name", ""))
+    med_period_var = IntVar(value=health.get("medication_every_days") or 7)
+    med_dose_var = StringVar(value=health.get("medication_dose") or "")
+
+    med_next_entry = create_date_entry(content, width=14)
+    med_next_entry.set_date(_parse_iso_date_or_today(health.get("next_medication_date")))
+
+    next_medical_entry = create_date_entry(content, width=14)
+    next_medical_entry.set_date(
+        _parse_iso_date_or_today(health.get("next_medical_visit_date"))
+    )
+
+    next_psych_entry = create_date_entry(content, width=14)
+    next_psych_entry.set_date(
+        _parse_iso_date_or_today(health.get("next_psych_visit_date"))
+    )
+
+    row = 0
+
+    def _add_row(title_key: str, desc_key: str, widget: Any) -> None:
+        nonlocal row
+        ttk.Label(content, text=t(title_key)).grid(column=0, row=row, sticky="w", pady=(pad, 0))
+        widget.grid(column=1, row=row, padx=pad, pady=(pad, 0), sticky="w")
+        ttk.Label(content, text=t(desc_key), wraplength=640, style="Small.TLabel").grid(
+            column=0, row=row + 1, columnspan=2, sticky="w", padx=(0, pad), pady=(1, pad)
+        )
+        row += 2
+
+    _add_row(
+        "config.profile.first_name",
+        "config.profile.first_name_desc",
+        ttk.Entry(content, textvariable=first_name_var, width=30, font=_font),
+    )
+    _add_row(
+        "config.profile.next_medication_date",
+        "config.profile.next_medication_date_desc",
+        med_next_entry,
+    )
+    _add_row(
+        "config.profile.medication_every_days",
+        "config.profile.medication_every_days_desc",
+        ttk.Spinbox(content, from_=1, to=60, textvariable=med_period_var, width=8, font=_font),
+    )
+    _add_row(
+        "config.profile.medication_dose",
+        "config.profile.medication_dose_desc",
+        ttk.Entry(content, textvariable=med_dose_var, width=20, font=_font),
+    )
+    _add_row(
+        "config.profile.next_medical_visit_date",
+        "config.profile.next_medical_visit_date_desc",
+        next_medical_entry,
+    )
+    _add_row(
+        "config.profile.next_psych_visit_date",
+        "config.profile.next_psych_visit_date_desc",
+        next_psych_entry,
+    )
+
+    status_var = StringVar(value="")
+    ttk.Label(content, textvariable=status_var, wraplength=640).grid(
+        column=0, row=row, columnspan=2, sticky="w", pady=pad
+    )
+    row += 1
+
+    def _save_user() -> None:
+        try:
+            app_service.update_profile_and_health(
+                first_name=first_name_var.get().strip(),
+                next_medication_date=med_next_entry.get_date().isoformat(),
+                medication_every_days=med_period_var.get(),
+                medication_dose=med_dose_var.get().strip() or None,
+                next_medical_visit_date=next_medical_entry.get_date().isoformat(),
+                next_psych_visit_date=next_psych_entry.get_date().isoformat(),
+            )
+            status_var.set(t("data.user_info_saved"))
+        except DataStoreError as exc:
+            messagebox.showerror(t("error.generic"), str(exc))
+        except Exception as exc:
+            logger.exception("User info save failed: %s", exc)
+            messagebox.showerror(t("error.generic"), str(exc))
+
+    btn_frame = ttk.Frame(content)
+    btn_frame.grid(column=0, row=row, columnspan=2, pady=pad)
+    ttk.Button(btn_frame, text=t("config.save"), command=_save_user).pack(side="left", padx=4)
 
 
 def _build_calendar_tab(parent, app_service) -> None:
@@ -281,6 +400,14 @@ def _build_calendar_tab(parent, app_service) -> None:
     _build_export_controls(left, app_service)
 
 
+EXPORT_OPTIONS = [
+    ("csv", "data.export_csv"),
+    ("xlsx", "data.export_xlsx"),
+    ("pdf", "data.export_pdf"),
+    ("png", "data.export_png"),
+]
+
+
 def _build_export_controls(parent, app_service) -> None:
     """Build export controls below the calendar area."""
     export_frame = ttk.Frame(parent, padding=UI_STYLE["padding"])
@@ -294,22 +421,35 @@ def _build_export_controls(parent, app_service) -> None:
     description_label = ttk.Label(
         export_frame,
         text=t("data.export_desc"),
-        wraplength=240,
+        wraplength=380,
         justify="left",
     )
     description_label.pack(fill="x", anchor="w", pady=(4, 4))
+
+    date_row = ttk.Frame(export_frame)
+    date_row.pack(fill="x", pady=(4, 0))
+    ttk.Label(date_row, text=t("data.export_date_from")).pack(side="left")
+    date_from = create_date_entry(date_row, width=12)
+    date_from.set_date(date.today() - timedelta(days=30))
+    date_from.pack(side="left", padx=(4, 12))
+    ttk.Label(date_row, text=t("data.export_date_to")).pack(side="left")
+    date_to = create_date_entry(date_row, width=12)
+    date_to.set_date(date.today())
+    date_to.pack(side="left", padx=(4, 0))
+
     controls_row = ttk.Frame(export_frame)
     controls_row.pack(fill="x", pady=6)
+    display_values = [t(key) for _, key in EXPORT_OPTIONS]
     fmt = create_combobox(
         controls_row,
         state="readonly",
-        values=["csv", "xlsx", "pdf", "png"],
-        width=12,
+        values=display_values,
+        width=22,
     )
-    fmt.set("csv")
+    fmt.set(display_values[0])
     fmt.pack(side="left")
 
-    status = ttk.Label(export_frame, text="", wraplength=240, justify="left")
+    status = ttk.Label(export_frame, text="", wraplength=380, justify="left")
     status.pack(fill="x", anchor="w", pady=6)
 
     def _sync_export_wrap(event=None) -> None:
@@ -317,14 +457,21 @@ def _build_export_controls(parent, app_service) -> None:
         available_width = export_frame.winfo_width()
         if available_width <= 1 and event is not None:
             available_width = getattr(event, "width", 0)
-        wraplength = max(220, available_width - (UI_STYLE["padding"] * 2))
+        wraplength = max(360, available_width - (UI_STYLE["padding"] * 2))
         description_label.configure(wraplength=wraplength)
         status.configure(wraplength=wraplength)
 
     export_frame.bind("<Configure>", _sync_export_wrap)
 
+    def _selected_format() -> str | None:
+        sel = fmt.get().strip()
+        for fmt_key, key in EXPORT_OPTIONS:
+            if t(key) == sel:
+                return fmt_key
+        return None
+
     def _run_export() -> None:
-        selected = fmt.get().strip().lower()
+        selected = _selected_format()
         if selected not in {"csv", "xlsx", "pdf", "png"}:
             return
         path = filedialog.asksaveasfilename(
@@ -334,7 +481,18 @@ def _build_export_controls(parent, app_service) -> None:
         if not path:
             return
         dest = Path(path)
-        frames = app_service.to_export_frames()
+        date_start = date_from.get_date()
+        date_end = date_to.get_date()
+        if date_start > date_end:
+            messagebox.showwarning(
+                t("error.generic"),
+                t("data.export_date_range_invalid"),
+            )
+            return
+        frames = app_service.to_export_frames(
+            date_from=date_start,
+            date_to=date_end,
+        )
         profile = app_service.get_profile()
         try:
             if selected == "csv":
@@ -342,10 +500,14 @@ def _build_export_controls(parent, app_service) -> None:
             elif selected == "xlsx":
                 export_to_excel(frames, dest)
             elif selected == "pdf":
-                export_to_pdf(frames, dest, profile_name=profile.get("first_name"))
+                export_to_pdf(
+                    frames,
+                    dest,
+                    profile_name=profile.get("first_name"),
+                )
             else:
                 export_to_png(frames, dest)
-            status.configure(text=t("data.export_ok", path=str(dest)))
+            status.configure(text=t("data.export_ok"))
         except DataStoreError as exc:
             messagebox.showerror(t("error.generic"), str(exc))
         except Exception as exc:

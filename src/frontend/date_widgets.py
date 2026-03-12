@@ -27,6 +27,10 @@ class DateEntryAdapter:
         """Proxy grid call to widget."""
         self.widget.grid(**kwargs)
 
+    def pack(self, **kwargs) -> None:
+        """Proxy pack call to widget."""
+        self.widget.pack(**kwargs)
+
     def get_date(self) -> date:
         """Read selected date.
 

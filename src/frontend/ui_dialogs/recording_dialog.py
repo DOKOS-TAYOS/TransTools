@@ -91,7 +91,7 @@ def show_recording_dialog(parent, app_service=None) -> None:
     # --- Ready view: options + record button ---
     ready_frame = ttk.Frame(main_frame)
     status_var = StringVar(value=t("recording.ready"))
-    ttk.Label(ready_frame, textvariable=status_var, wraplength=420).grid(
+    ttk.Label(ready_frame, textvariable=status_var, wraplength=560).grid(
         column=0, row=0, columnspan=2, pady=4
     )
 
@@ -153,7 +153,7 @@ def show_recording_dialog(parent, app_service=None) -> None:
         font=(UI_STYLE["font_family"], 14),
     )
     completed_label.pack(pady=(16, 8))
-    path_label = ttk.Label(completed_frame, text="", wraplength=380)
+    path_label = ttk.Label(completed_frame, text="", wraplength=520)
     exit_btn = ttk.Button(
         completed_frame,
         text=t("menu.close"),

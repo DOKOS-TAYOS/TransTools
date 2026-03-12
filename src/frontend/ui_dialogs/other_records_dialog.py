@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
-from tkinter import StringVar, Text, Toplevel, messagebox, ttk
+from tkinter import BooleanVar, StringVar, Text, Toplevel, messagebox, ttk
 
 from config import UI_STYLE
 from core.context import get_app_service
@@ -74,6 +74,7 @@ def _build_visit_tab(frame, app_service):
     """Create visit logging tab content."""
     visit_type_var = StringVar(value="medical")
     status_var = StringVar(value="")
+    select_next_var = BooleanVar(value=False)
 
     ttk.Label(frame, text=t("other.visit_date")).grid(column=0, row=0, sticky="w", pady=4)
     date_entry = create_date_entry(frame, width=14)
@@ -89,27 +90,43 @@ def _build_visit_tab(frame, app_service):
         width=18,
     ).grid(column=1, row=1, sticky="w", pady=4)
 
-    ttk.Label(frame, text=t("other.visit_next_date")).grid(column=0, row=2, sticky="w", pady=4)
-    next_entry = create_date_entry(frame, width=14)
+    def _toggle_next_date() -> None:
+        if select_next_var.get():
+            next_entry.grid(column=1, row=0, padx=(8, 0))
+        else:
+            next_entry.widget.grid_remove()
+
+    next_date_frame = ttk.Frame(frame)
+    next_date_frame.grid(column=0, row=2, columnspan=2, sticky="w", pady=4)
+    ttk.Checkbutton(
+        next_date_frame,
+        text=t("other.select_next_date"),
+        variable=select_next_var,
+        command=_toggle_next_date,
+    ).grid(column=0, row=0)
+    next_entry = create_date_entry(next_date_frame, width=14)
     next_entry.set_date(date.today())
-    next_entry.grid(column=1, row=2, sticky="w", pady=4)
+    _toggle_next_date()
 
     ttk.Label(frame, text=t("other.notes")).grid(column=0, row=3, sticky="nw", pady=4)
     notes = Text(frame, width=46, height=7)
     configure_notes_widget(notes)
     notes.grid(column=1, row=3, sticky="w", pady=4)
 
-    ttk.Label(frame, textvariable=status_var, wraplength=520).grid(
+    ttk.Label(frame, textvariable=status_var, wraplength=680).grid(
         column=0, row=4, columnspan=2, sticky="w", pady=4
     )
 
     def _save_visit() -> None:
         try:
+            next_date: str | None = (
+                next_entry.get_date().isoformat() if select_next_var.get() else None
+            )
             app_service.add_visit_record(
                 target_date=date_entry.get_date(),
                 visit_type=visit_type_var.get(),
                 completed=True,
-                next_visit_date=next_entry.get_date().isoformat(),
+                next_visit_date=next_date,
                 notes=notes.get("1.0", "end").strip() or None,
             )
             status_var.set(t("other.saved_visit"))
@@ -156,7 +173,7 @@ def _build_event_tab(frame, app_service):
     configure_notes_widget(notes)
     notes.grid(column=1, row=3, sticky="w", pady=4)
 
-    ttk.Label(frame, textvariable=status_var, wraplength=520).grid(
+    ttk.Label(frame, textvariable=status_var, wraplength=680).grid(
         column=0, row=4, columnspan=2, sticky="w", pady=4
     )
 

@@ -21,7 +21,7 @@ def show_app_info_dialog(parent) -> None:
     dlg.configure(background=UI_STYLE["bg"])
 
     pad = UI_STYLE["padding"]
-    wraplength = 760
+    wraplength = 920
     scroll_container, _canvas, inner_frame = create_scrollable_content(dlg, UI_STYLE["bg"])
 
     create_collapsible_section(
