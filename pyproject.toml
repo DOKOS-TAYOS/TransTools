@@ -60,3 +60,4 @@ fixable = ["I"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 norecursedirs = [".git", ".venv", "output", ".pytest_tmp", ".ruff_cache", ".pytest_cache"]
+addopts = "-p no:cacheprovider"

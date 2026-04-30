@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import base64
 import json
 from pathlib import Path
 from typing import Any
@@ -87,22 +86,3 @@ class VoicePrivacyService:
         self.key_path.write_bytes(key + b"\n")
         logger.info("Created new local voice encryption key: %s", self.key_path)
         return key
-
-    @staticmethod
-    def is_probably_encrypted(value: str | None) -> bool:
-        """Best-effort check for encrypted token format.
-
-        Args:
-            value: Token candidate.
-
-        Returns:
-            True if value looks like URL-safe base64 token.
-        """
-        if not value or not isinstance(value, str):
-            return False
-        try:
-            base64.urlsafe_b64decode(value.encode("utf-8"))
-            return True
-        except Exception:
-            return False
-

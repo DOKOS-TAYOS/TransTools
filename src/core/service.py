@@ -10,10 +10,11 @@ from uuid import uuid4
 
 import pandas as pd
 
+from config.paths import get_contacts_path
+from i18n import t
 from utils import DataStoreError, get_logger
 from utils.datetime_utils import utc_now_iso
 
-from config.paths import get_contacts_path
 from .privacy import VoicePrivacyService
 from .repository import ISO_DATE, StateRepository
 from .types import VoiceAnalysisResult
@@ -180,9 +181,7 @@ class AppService:
         """Apply health field updates to state."""
         cfg = state["health_config"]
         cfg["next_medication_date"] = (
-            next_medication_date
-            if _parse_iso_date(next_medication_date) is not None
-            else None
+            next_medication_date if _parse_iso_date(next_medication_date) is not None else None
         )
         cfg["medication_every_days"] = (
             int(medication_every_days)
@@ -196,9 +195,7 @@ class AppService:
             else None
         )
         cfg["next_psych_visit_date"] = (
-            next_psych_visit_date
-            if _parse_iso_date(next_psych_visit_date) is not None
-            else None
+            next_psych_visit_date if _parse_iso_date(next_psych_visit_date) is not None else None
         )
 
     def get_profile(self) -> dict[str, Any]:
@@ -446,8 +443,7 @@ class AppService:
             "taken": bool(taken),
             "hour": self._normalize_optional_text(hour),
             "dose": (
-                self._normalize_optional_text(dose)
-                or state["health_config"].get("medication_dose")
+                self._normalize_optional_text(dose) or state["health_config"].get("medication_dose")
             ),
             "notes": self._normalize_optional_text(notes),
             "created_at": utc_now_iso(),
@@ -648,8 +644,7 @@ class AppService:
         medical_due = _parse_iso_date(state["health_config"].get("next_medical_visit_date"))
         if medical_due and medical_due <= today:
             alerts.append(
-                f"Tienes una consulta médica pendiente "
-                f"(fecha objetivo: {medical_due.isoformat()})."
+                f"Tienes una consulta médica pendiente (fecha objetivo: {medical_due.isoformat()})."
             )
 
         psych_due = _parse_iso_date(state["health_config"].get("next_psych_visit_date"))
@@ -684,14 +679,25 @@ class AppService:
             if row.get("taken")
         }
         alerts: list[str] = []
+        overdue_count = 0
+        oldest_overdue: date | None = None
         for expected in expected_dates:
-            if expected not in taken_days:
-                if expected == today:
-                    alerts.append("Hoy te toca medicación y no aparece registrada.")
-                else:
-                    alerts.append(
-                        f"Tienes medicación pendiente desde {expected.isoformat()}."
-                    )
+            if expected in taken_days:
+                continue
+            if expected == today:
+                alerts.append(t("reminders.medication.today_due"))
+                continue
+            overdue_count += 1
+            if oldest_overdue is None:
+                oldest_overdue = expected
+        if overdue_count and oldest_overdue is not None:
+            alerts.append(
+                t(
+                    "reminders.medication.overdue_summary",
+                    count=str(overdue_count),
+                    date=oldest_overdue.isoformat(),
+                )
+            )
         return alerts
 
     def _build_daily_summary_from_snapshot(
@@ -800,12 +806,11 @@ class AppService:
         if date_from is not None or date_to is not None:
             voice_rows = [r for r in voice_rows if _in_range(r.get("target_date", ""))]
             snapshot = dict(snapshot)
-            snapshot["medication"] = [r for r in snapshot["medication"] if _in_range(r.get("date", ""))]
-            snapshot["visits"] = [r for r in snapshot["visits"] if _in_range(r.get("date", ""))]
-            snapshot["events"] = [
-                r for r in snapshot["events"]
-                if _in_range(r.get("date", ""))
+            snapshot["medication"] = [
+                r for r in snapshot["medication"] if _in_range(r.get("date", ""))
             ]
+            snapshot["visits"] = [r for r in snapshot["visits"] if _in_range(r.get("date", ""))]
+            snapshot["events"] = [r for r in snapshot["events"] if _in_range(r.get("date", ""))]
             snapshot["habits"] = [r for r in snapshot["habits"] if _in_range(r.get("date", ""))]
             snapshot["all_dates"] = [k for k in snapshot["all_dates"] if _in_range(k)]
 

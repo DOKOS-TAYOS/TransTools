@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import gc
 from datetime import date, datetime, timedelta
-from typing import Any
 from pathlib import Path
 from tkinter import IntVar, StringVar, Toplevel, filedialog, messagebox, ttk
+from typing import Any
 
 import matplotlib
 
@@ -19,7 +19,7 @@ from matplotlib.figure import Figure
 from config import UI_STYLE
 from core.context import get_app_service
 from core.exporters import export_to_csv, export_to_excel, export_to_pdf, export_to_png
-from frontend.date_widgets import create_date_entry, get_calendar_locale
+from frontend.date_widgets import DateEntryAdapter, create_date_entry, get_calendar_locale
 from frontend.input_widgets import create_combobox
 from frontend.window_utils import place_window_centered
 from i18n import t
@@ -113,14 +113,25 @@ def show_data_view_dialog(parent, app_service=None) -> None:
     dlg.after(50, _fix_geometry)
 
 
-def _parse_iso_date_or_today(value: str | None) -> date:
-    """Parse ISO date string or return today if empty/invalid."""
+def _parse_optional_iso_date(value: str | None) -> date | None:
+    """Parse optional ISO date string."""
     if not value or not value.strip():
-        return date.today()
+        return None
     try:
         return datetime.strptime(value.strip(), "%Y-%m-%d").date()
     except ValueError:
-        return date.today()
+        return None
+
+
+def _set_optional_date_entry(entry: DateEntryAdapter, value: str | None) -> None:
+    """Populate an optional date entry from persisted ISO text."""
+    entry.set_optional_date(_parse_optional_iso_date(value))
+
+
+def _get_optional_date_iso(entry: DateEntryAdapter) -> str | None:
+    """Read an optional date entry back into ISO text."""
+    selected = entry.get_optional_date()
+    return selected.isoformat() if selected is not None else None
 
 
 def _build_user_tab(parent, app_service) -> None:
@@ -138,17 +149,13 @@ def _build_user_tab(parent, app_service) -> None:
     med_dose_var = StringVar(value=health.get("medication_dose") or "")
 
     med_next_entry = create_date_entry(content, width=14)
-    med_next_entry.set_date(_parse_iso_date_or_today(health.get("next_medication_date")))
+    _set_optional_date_entry(med_next_entry, health.get("next_medication_date"))
 
     next_medical_entry = create_date_entry(content, width=14)
-    next_medical_entry.set_date(
-        _parse_iso_date_or_today(health.get("next_medical_visit_date"))
-    )
+    _set_optional_date_entry(next_medical_entry, health.get("next_medical_visit_date"))
 
     next_psych_entry = create_date_entry(content, width=14)
-    next_psych_entry.set_date(
-        _parse_iso_date_or_today(health.get("next_psych_visit_date"))
-    )
+    _set_optional_date_entry(next_psych_entry, health.get("next_psych_visit_date"))
 
     row = 0
 
@@ -202,11 +209,11 @@ def _build_user_tab(parent, app_service) -> None:
         try:
             app_service.update_profile_and_health(
                 first_name=first_name_var.get().strip(),
-                next_medication_date=med_next_entry.get_date().isoformat(),
+                next_medication_date=_get_optional_date_iso(med_next_entry),
                 medication_every_days=med_period_var.get(),
                 medication_dose=med_dose_var.get().strip() or None,
-                next_medical_visit_date=next_medical_entry.get_date().isoformat(),
-                next_psych_visit_date=next_psych_entry.get_date().isoformat(),
+                next_medical_visit_date=_get_optional_date_iso(next_medical_entry),
+                next_psych_visit_date=_get_optional_date_iso(next_psych_entry),
             )
             status_var.set(t("data.user_info_saved"))
         except DataStoreError as exc:

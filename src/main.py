@@ -27,6 +27,11 @@ setup_logging(
 logger = get_logger(__name__)
 
 
+def _build_restart_command() -> list[str]:
+    """Build a stable restart command for the current application entry script."""
+    return [sys.executable, str(Path(__file__).resolve())]
+
+
 def _voice_study_callback(menu, app_service) -> None:
     """Open voice study (recording) dialog when user selects it from menu."""
     from frontend.ui_dialogs.recording_dialog import show_recording_dialog
@@ -82,7 +87,8 @@ def _config_callback(menu, app_service) -> None:
 
     if show_config_dialog(menu, app_service=app_service):
         menu.destroy()
-        os.execv(sys.executable, [sys.executable] + sys.argv)
+        restart_command = _build_restart_command()
+        os.execv(restart_command[0], restart_command)
 
 
 def _startup_callback(menu_window, app_service) -> None:

@@ -12,9 +12,11 @@ from typing import Any
 
 from config.paths import (
     get_data_file_path,
+    get_legacy_output_dir,
     get_output_dir,
     get_patient_history_path,
     get_patient_profile_path,
+    migrate_legacy_output_dir,
 )
 from utils import DataStoreError, get_logger
 from utils.datetime_utils import utc_now_iso
@@ -267,9 +269,7 @@ def _merge_habit_catalog(
     existing: list[dict[str, Any]], default: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
     """Merge new habits from default into existing catalog (by id)."""
-    existing_ids = {
-        h["id"] for h in existing if isinstance(h, dict) and h.get("id")
-    }
+    existing_ids = {h["id"] for h in existing if isinstance(h, dict) and h.get("id")}
     result = list(existing)
     for habit in default:
         if isinstance(habit, dict) and habit.get("id") not in existing_ids:
@@ -385,6 +385,10 @@ class StateRepository:
         """
         if paths is None:
             out_dir = get_output_dir()
+            migrate_legacy_output_dir(
+                legacy_dir=get_legacy_output_dir(),
+                target_dir=out_dir,
+            )
             paths = RepositoryPaths(
                 profile_file=get_patient_profile_path(),
                 history_file=get_patient_history_path(),
@@ -410,14 +414,10 @@ class StateRepository:
             return state
 
         profile = (
-            _safe_json_load(self.paths.profile_file)
-            if profile_exists
-            else default_profile_state()
+            _safe_json_load(self.paths.profile_file) if profile_exists else default_profile_state()
         )
         history = (
-            _safe_json_load(self.paths.history_file)
-            if history_exists
-            else default_history_state()
+            _safe_json_load(self.paths.history_file) if history_exists else default_history_state()
         )
 
         profile = self._migrate_profile(profile)
@@ -442,12 +442,8 @@ class StateRepository:
             "created_at": state.get("created_at", now),
             "updated_at": now,
             "profile": state.get("profile", default_profile_state()["profile"]),
-            "health_config": state.get(
-                "health_config", default_profile_state()["health_config"]
-            ),
-            "habit_catalog": state.get(
-                "habit_catalog", default_profile_state()["habit_catalog"]
-            ),
+            "health_config": state.get("health_config", default_profile_state()["health_config"]),
+            "habit_catalog": state.get("habit_catalog", default_profile_state()["habit_catalog"]),
             "meta": state.get("meta", default_profile_state()["meta"]),
         }
         _atomic_save(self.paths.profile_file, profile)

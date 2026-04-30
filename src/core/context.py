@@ -13,4 +13,3 @@ def get_app_service() -> AppService:
     if _SERVICE is None:
         _SERVICE = AppService()
     return _SERVICE
-

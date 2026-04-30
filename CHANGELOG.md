@@ -36,8 +36,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Default data storage now uses a user-scoped directory on Windows and Linux instead of the project-local `output/`, with one-time migration from legacy files when needed.
+- Settings restart now relaunches the app through the resolved `src/main.py` path instead of depending on `sys.argv[0]`.
+- Medication startup reminders now stay compact by showing today's due warning plus one aggregated overdue summary.
+- Legacy data migration is now file-by-file, so existing destination files are preserved while any missing legacy files are still copied across.
 - Configuration dialog now also edits profile and health fields.
+- Obsolete `FILE_DATA_FORMAT` config is no longer emitted or treated as a supported setting.
+- Optional health dates in the unified data view no longer auto-save as "today" when left blank, and they can be cleared safely.
+- Configuration numeric fields now use narrower error handling instead of broad fallback catches.
+- Pytest cacheprovider is now disabled in project config to avoid Windows permission warnings in this workspace.
 - Voice analysis now computes heuristic mood scores from acoustic features.
+- Voice recording can again be registered for a user-selected past date instead of always using the current day.
 - README updated to reflect full v1 scope and offline-first behavior.
 
 ## [0.1.0] - 2026-02-23

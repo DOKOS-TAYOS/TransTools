@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import random
+import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -11,12 +12,12 @@ from uuid import uuid4
 # Add src to path for imports
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "src"
-import sys
+
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from config.paths import get_output_dir, get_patient_history_path
-from core.privacy import VoicePrivacyService
+from config.paths import get_output_dir, get_patient_history_path  # noqa: E402
+from core.privacy import VoicePrivacyService  # noqa: E402
 
 
 def _random_id() -> str:
@@ -78,24 +79,26 @@ def generate_voice_records(
                 }
                 encrypted = privacy.encrypt_metrics(sensitive)
 
-                records.append({
-                    "id": _random_id(),
-                    "recorded_at": _iso_now(),
-                    "target_date": _iso_date(current),
-                    "energy_rms": round(energy, 16),
-                    "mood_auto": {
-                        "happy": round(mood_h, 16),
-                        "sad": round(mood_s, 16),
-                        "angry": round(mood_a, 16),
-                    },
-                    "mood_self": {
-                        "happy": mood_self_h,
-                        "sad": mood_self_s,
-                        "angry": mood_self_a,
-                    },
-                    "tone_encrypted": encrypted,
-                    "audio_saved_path": None,
-                })
+                records.append(
+                    {
+                        "id": _random_id(),
+                        "recorded_at": _iso_now(),
+                        "target_date": _iso_date(current),
+                        "energy_rms": round(energy, 16),
+                        "mood_auto": {
+                            "happy": round(mood_h, 16),
+                            "sad": round(mood_s, 16),
+                            "angry": round(mood_a, 16),
+                        },
+                        "mood_self": {
+                            "happy": mood_self_h,
+                            "sad": mood_self_s,
+                            "angry": mood_self_a,
+                        },
+                        "tone_encrypted": encrypted,
+                        "audio_saved_path": None,
+                    }
+                )
         current += timedelta(days=1)
 
     return sorted(records, key=lambda r: (r["target_date"], r["recorded_at"]))
@@ -106,15 +109,17 @@ def generate_medication_records(start: date, end: date) -> list[dict]:
     records: list[dict] = []
     current = start
     while current <= end:
-        records.append({
-            "id": _random_id(),
-            "date": _iso_date(current),
-            "taken": True,
-            "hour": "09:00" if random.random() < 0.7 else "10:30",
-            "dose": "0.3",
-            "notes": None,
-            "created_at": _iso_now(),
-        })
+        records.append(
+            {
+                "id": _random_id(),
+                "date": _iso_date(current),
+                "taken": True,
+                "hour": "09:00" if random.random() < 0.7 else "10:30",
+                "dose": "0.3",
+                "notes": None,
+                "created_at": _iso_now(),
+            }
+        )
         current += timedelta(days=2)
     return records
 
@@ -124,34 +129,45 @@ def generate_visits(start: date, end: date) -> list[dict]:
     records: list[dict] = []
     # Psicología ~cada 2 semanas, médico ~cada mes
     psych_dates = [
-        date(2026, 1, 8), date(2026, 1, 22), date(2026, 2, 5), date(2026, 2, 19),
+        date(2026, 1, 8),
+        date(2026, 1, 22),
+        date(2026, 2, 5),
+        date(2026, 2, 19),
         date(2026, 3, 5),
     ]
     med_dates = [date(2026, 1, 15), date(2026, 2, 12), date(2026, 3, 9)]
     for d in psych_dates:
         if start <= d <= end:
             next_d = d + timedelta(days=14)
-            records.append({
-                "id": _random_id(),
-                "date": _iso_date(d),
-                "visit_type": "psychology",
-                "completed": True,
-                "next_visit_date": _iso_date(next_d) if next_d <= end + timedelta(days=30) else None,
-                "notes": "Sesión de seguimiento" if random.random() < 0.5 else None,
-                "created_at": _iso_now(),
-            })
+            records.append(
+                {
+                    "id": _random_id(),
+                    "date": _iso_date(d),
+                    "visit_type": "psychology",
+                    "completed": True,
+                    "next_visit_date": (
+                        _iso_date(next_d) if next_d <= end + timedelta(days=30) else None
+                    ),
+                    "notes": "Sesión de seguimiento" if random.random() < 0.5 else None,
+                    "created_at": _iso_now(),
+                }
+            )
     for d in med_dates:
         if start <= d <= end:
             next_d = d + timedelta(days=28)
-            records.append({
-                "id": _random_id(),
-                "date": _iso_date(d),
-                "visit_type": "medical",
-                "completed": True,
-                "next_visit_date": _iso_date(next_d) if next_d <= end + timedelta(days=60) else None,
-                "notes": "Control hormonal" if random.random() < 0.5 else None,
-                "created_at": _iso_now(),
-            })
+            records.append(
+                {
+                    "id": _random_id(),
+                    "date": _iso_date(d),
+                    "visit_type": "medical",
+                    "completed": True,
+                    "next_visit_date": (
+                        _iso_date(next_d) if next_d <= end + timedelta(days=60) else None
+                    ),
+                    "notes": "Control hormonal" if random.random() < 0.5 else None,
+                    "created_at": _iso_now(),
+                }
+            )
     return sorted(records, key=lambda r: r["date"])
 
 
@@ -166,13 +182,15 @@ def generate_habits(start: date, end: date, catalog_ids: list[str]) -> list[dict
             shown = (catalog_ids[start_idx:] + catalog_ids[:start_idx])[:n_shown]
             n_completed = random.randint(1, len(shown))
             completed = random.sample(shown, n_completed)
-            records.append({
-                "id": _random_id(),
-                "date": _iso_date(current),
-                "shown_habits": shown,
-                "completed_habits": completed,
-                "created_at": _iso_now(),
-            })
+            records.append(
+                {
+                    "id": _random_id(),
+                    "date": _iso_date(current),
+                    "shown_habits": shown,
+                    "completed_habits": completed,
+                    "created_at": _iso_now(),
+                }
+            )
         current += timedelta(days=1)
     return records
 
@@ -189,14 +207,16 @@ def generate_other_events(start: date, end: date) -> list[dict]:
     records: list[dict] = []
     for d, cat, tags in events:
         if start <= d <= end:
-            records.append({
-                "id": _random_id(),
-                "date": _iso_date(d),
-                "category": cat,
-                "tags": [t.strip() for t in tags.split(",")],
-                "notes": f"Evento registrado el {d.isoformat()}",
-                "created_at": _iso_now(),
-            })
+            records.append(
+                {
+                    "id": _random_id(),
+                    "date": _iso_date(d),
+                    "category": cat,
+                    "tags": [t.strip() for t in tags.split(",")],
+                    "notes": f"Evento registrado el {d.isoformat()}",
+                    "created_at": _iso_now(),
+                }
+            )
     return sorted(records, key=lambda r: r["date"])
 
 
@@ -223,9 +243,18 @@ def main() -> None:
         catalog = profile.get("habit_catalog", [])
     else:
         catalog = []
-    catalog_ids = [h["id"] for h in catalog] if catalog else [
-        "hidratarse", "dormir", "caminar", "respirar", "diario", "desconexion",
-    ]
+    catalog_ids = (
+        [h["id"] for h in catalog]
+        if catalog
+        else [
+            "hidratarse",
+            "dormir",
+            "caminar",
+            "respirar",
+            "diario",
+            "desconexion",
+        ]
+    )
 
     voice = generate_voice_records(start, end, privacy)
     # Append existing voice records (they are from Mar 10-11)
@@ -249,8 +278,10 @@ def main() -> None:
     }
 
     history_path.write_text(json.dumps(history, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"Generated history: {len(voice)} voice, {len(medication)} medication, "
-          f"{len(visits)} visits, {len(habits)} habits, {len(other_events)} events")
+    print(
+        f"Generated history: {len(voice)} voice, {len(medication)} medication, "
+        f"{len(visits)} visits, {len(habits)} habits, {len(other_events)} events"
+    )
     print(f"Saved to {history_path}")
 
 

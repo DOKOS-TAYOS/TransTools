@@ -6,13 +6,14 @@ import time
 from datetime import date, datetime
 from threading import Thread
 from tkinter import BooleanVar, IntVar, StringVar, Toplevel, messagebox, ttk
-from typing import Any
+from typing import Any, Protocol
 
 from audio import analyze_audio, record_audio
 from config import UI_STYLE, get_audio_dir
 from config.env import get_env_from_schema
 from core.context import get_app_service
 from core.types import VoiceAnalysisResult
+from frontend.date_widgets import create_date_entry
 from frontend.input_widgets import create_spinbox
 from frontend.window_utils import place_window_centered
 from i18n import t
@@ -21,6 +22,12 @@ from utils import AnalysisError, DataStoreError, RecordingError, get_logger
 RECORDING_SYMBOL = "\u25cf"  # ● (black circle, typical recording indicator)
 
 logger = get_logger(__name__)
+
+
+class SupportsGetDate(Protocol):
+    """Protocol for widgets exposing a selected date."""
+
+    def get_date(self) -> date: ...
 
 
 def _save_audio(audio_data, sample_rate: int, enabled: bool) -> str:
@@ -67,6 +74,21 @@ def _build_self_mood_payload(happy: int, sad: int, angry: int) -> dict[str, floa
     }
 
 
+def _collect_record_form_state(
+    target_date_entry: SupportsGetDate,
+    mood_happy: int,
+    mood_sad: int,
+    mood_angry: int,
+    should_save_audio: bool,
+) -> tuple[date, dict[str, float], bool]:
+    """Collect the recording form state from the visible controls."""
+    return (
+        target_date_entry.get_date(),
+        _build_self_mood_payload(mood_happy, mood_sad, mood_angry),
+        should_save_audio,
+    )
+
+
 def show_recording_dialog(parent, app_service=None) -> None:
     """Show recording dialog. Record -> Analyze -> Save.
 
@@ -101,26 +123,25 @@ def show_recording_dialog(parent, app_service=None) -> None:
         variable=save_audio_var,
     ).grid(column=0, row=1, columnspan=2, sticky="w", pady=4)
 
+    ttk.Label(ready_frame, text=t("recording.for_date")).grid(column=0, row=2, sticky="w", pady=2)
+    target_date_entry = create_date_entry(ready_frame, width=14)
+    target_date_entry.set_date(date.today())
+    target_date_entry.grid(column=1, row=2, sticky="w", pady=2)
+
     ttk.Label(ready_frame, text=t("recording.self_mood_title")).grid(
-        column=0, row=2, columnspan=2, sticky="w"
+        column=0, row=3, columnspan=2, sticky="w"
     )
-    ttk.Label(ready_frame, text=t("recording.self_happy")).grid(
-        column=0, row=3, sticky="w", pady=2
-    )
+    ttk.Label(ready_frame, text=t("recording.self_happy")).grid(column=0, row=4, sticky="w", pady=2)
     create_spinbox(ready_frame, from_=0, to=5, width=5, textvariable=mood_happy_var).grid(
-        column=1, row=3, sticky="w"
-    )
-    ttk.Label(ready_frame, text=t("recording.self_sad")).grid(
-        column=0, row=4, sticky="w", pady=2
-    )
-    create_spinbox(ready_frame, from_=0, to=5, width=5, textvariable=mood_sad_var).grid(
         column=1, row=4, sticky="w"
     )
-    ttk.Label(ready_frame, text=t("recording.self_angry")).grid(
-        column=0, row=5, sticky="w", pady=2
-    )
-    create_spinbox(ready_frame, from_=0, to=5, width=5, textvariable=mood_angry_var).grid(
+    ttk.Label(ready_frame, text=t("recording.self_sad")).grid(column=0, row=5, sticky="w", pady=2)
+    create_spinbox(ready_frame, from_=0, to=5, width=5, textvariable=mood_sad_var).grid(
         column=1, row=5, sticky="w"
+    )
+    ttk.Label(ready_frame, text=t("recording.self_angry")).grid(column=0, row=6, sticky="w", pady=2)
+    create_spinbox(ready_frame, from_=0, to=5, width=5, textvariable=mood_angry_var).grid(
+        column=1, row=6, sticky="w"
     )
 
     record_btn = ttk.Button(
@@ -128,11 +149,11 @@ def show_recording_dialog(parent, app_service=None) -> None:
         text=t("recording.record"),
         width=UI_STYLE["button_width"],
     )
-    record_btn.grid(column=0, row=6, padx=4, pady=8)
+    record_btn.grid(column=0, row=7, padx=4, pady=8)
     close_btn = ttk.Button(
         ready_frame, text=t("menu.close"), command=dlg.destroy, width=UI_STYLE["button_width"]
     )
-    close_btn.grid(column=1, row=6, padx=4, pady=8)
+    close_btn.grid(column=1, row=7, padx=4, pady=8)
 
     # --- Recording view: only "Grabando" + symbol ---
     recording_frame = ttk.Frame(main_frame)
@@ -255,6 +276,7 @@ def show_recording_dialog(parent, app_service=None) -> None:
         try:
             audio, sr = record_audio()
             if dlg.winfo_exists():
+
                 def _to_analyzing() -> None:
                     recording_timer_active["value"] = False
                     _show_recording(t("recording.analyzing"))
@@ -286,8 +308,6 @@ def show_recording_dialog(parent, app_service=None) -> None:
     def do_record() -> None:
         if is_busy["value"]:
             return
-        target_date = date.today()
-
         recording_timer_active["value"] = True
         total_sec = int(get_env_from_schema("RECORD_DURATION_SEC"))
         start_time = time.time()
@@ -298,14 +318,16 @@ def show_recording_dialog(parent, app_service=None) -> None:
 
         dlg.after(0, _update_recording_timer, start_time, total_sec)
 
-        mood_self = _build_self_mood_payload(
-            mood_happy_var.get(),
-            mood_sad_var.get(),
-            mood_angry_var.get(),
+        target_date, mood_self, should_save_audio = _collect_record_form_state(
+            target_date_entry=target_date_entry,
+            mood_happy=mood_happy_var.get(),
+            mood_sad=mood_sad_var.get(),
+            mood_angry=mood_angry_var.get(),
+            should_save_audio=bool(save_audio_var.get()),
         )
         worker = Thread(
             target=_run_record_worker,
-            args=(target_date, mood_self, bool(save_audio_var.get())),
+            args=(target_date, mood_self, should_save_audio),
             daemon=True,
         )
         worker.start()

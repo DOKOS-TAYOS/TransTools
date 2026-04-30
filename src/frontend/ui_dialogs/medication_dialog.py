@@ -78,9 +78,7 @@ def show_medication_dialog(parent, app_service=None) -> None:
     def _save() -> None:
         try:
             wants_next = select_next_var.get()
-            next_date: str | None = (
-                next_entry.get_date().isoformat() if wants_next else None
-            )
+            next_date: str | None = next_entry.get_date().isoformat() if wants_next else None
             app_service.add_medication_record(
                 target_date=date_entry.get_date(),
                 taken=True,

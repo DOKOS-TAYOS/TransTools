@@ -47,6 +47,8 @@
     "onboarding.cancel_body":  "If you close now, the app will close because onboarding is required on first run.",
     "onboarding.required":  "You must complete onboarding to use the app.",
     "reminders.title":  "Pending reminders",
+    "reminders.medication.today_due":  "Your medication is due today and it is not logged yet.",
+    "reminders.medication.overdue_summary":  "You have {count} overdue medication doses since {date}.",
     "recording.ready":  "Ready. Click Record to start.",
     "recording.for_date":  "Register for date",
     "recording.save_audio_now":  "Save audio for this recording",

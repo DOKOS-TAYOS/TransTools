@@ -47,6 +47,8 @@
     "onboarding.cancel_body":  "Si cierras ahora, la aplicación se cerrará porque el onboarding es obligatorio en el primer inicio.",
     "onboarding.required":  "Debes completar el onboarding inicial para usar la aplicación.",
     "reminders.title":  "Recordatorios pendientes",
+    "reminders.medication.today_due":  "Hoy te toca medicación y no aparece registrada.",
+    "reminders.medication.overdue_summary":  "Tienes {count} tomas de medicación pendientes desde {date}.",
     "recording.ready":  "Listo. Pulsa Grabar para comenzar.",
     "recording.for_date":  "Registrar para la fecha",
     "recording.save_audio_now":  "Guardar audio de esta grabación",

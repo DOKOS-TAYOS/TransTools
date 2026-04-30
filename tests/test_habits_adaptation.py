@@ -38,4 +38,3 @@ def test_habits_decrease_with_low_completion(app_service) -> None:
     next_selection = app_service.get_habit_selection_for_date(base_day)
     assert len(next_selection.shown_habits) <= 5
     assert len(next_selection.shown_habits) >= 3
-

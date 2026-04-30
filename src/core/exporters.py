@@ -76,9 +76,7 @@ def export_to_pdf(
         from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
         from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
     except Exception as exc:
-        raise DataStoreError(
-            "La libreria reportlab es necesaria para exportar PDF."
-        ) from exc
+        raise DataStoreError("La libreria reportlab es necesaria para exportar PDF.") from exc
 
     weekly = frames.get("voz_semanal", pd.DataFrame())
     medication = frames.get("medicacion", pd.DataFrame())

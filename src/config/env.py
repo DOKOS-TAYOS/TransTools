@@ -111,7 +111,6 @@ ENV_SCHEMA: list[dict[str, Any]] = [
     {"key": "UI_FONT_FAMILY", "default": "Bahnschrift", "cast_type": str},
     {"key": "UI_PADDING", "default": 8, "cast_type": int},
     {"key": "FILE_OUTPUT_DIR", "default": "output", "cast_type": str},
-    {"key": "FILE_DATA_FORMAT", "default": "json", "cast_type": str, "options": ("json",)},
     {"key": "SAVE_AUDIO", "default": True, "cast_type": bool},
     {"key": "RECORD_DURATION_SEC", "default": 10, "cast_type": int},
     {

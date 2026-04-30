@@ -159,7 +159,7 @@ def configure_ttk_styles(root) -> None:
 
     # TSpinbox - numeric spin (darker than bg, lighter on hover) (Python 3.11+)
     # Arrows height = font_size + padding  // 2to match spinbox box height
-    spinbox_arrowsize = UI_STYLE["font_size"]  + UI_STYLE["padding"]// 2
+    spinbox_arrowsize = UI_STYLE["font_size"] + UI_STYLE["padding"] // 2
     try:
         style.configure(
             "TSpinbox",

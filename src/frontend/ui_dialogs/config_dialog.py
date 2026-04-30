@@ -1,7 +1,7 @@
 """Configuration dialog for TransTools."""
 
 from pathlib import Path
-from tkinter import BooleanVar, Canvas, IntVar, StringVar, Toplevel, messagebox, ttk
+from tkinter import BooleanVar, Canvas, IntVar, StringVar, TclError, Toplevel, messagebox, ttk
 from typing import Any
 
 from config import UI_STYLE, get_current_env_values, write_env_file
@@ -36,6 +36,14 @@ def _add_param_row(
     desc = ttk.Label(frame, text=t(desc_key), wraplength=640, style="Small.TLabel")
     desc.grid(column=0, row=row + 1, columnspan=2, sticky="w", padx=(0, pad), pady=(2, pad))
     return row + 2
+
+
+def _bounded_int_value(var: IntVar, minimum: int, maximum: int, default: int) -> str:
+    """Read an IntVar safely and clamp it into the supported bounds."""
+    try:
+        return str(max(minimum, min(maximum, var.get())))
+    except (TclError, ValueError):
+        return str(default)
 
 
 def show_config_dialog(parent, app_service: Any | None = None) -> bool:
@@ -307,10 +315,12 @@ def show_config_dialog(parent, app_service: Any | None = None) -> bool:
         values["FILE_OUTPUT_DIR"] = out_var.get().strip() or "output"
         values["SAVE_AUDIO"] = "true" if save_audio_var.get() else "false"
         values["LOG_CONSOLE"] = "true" if log_console_var.get() else "false"
-        try:
-            values["RECORD_DURATION_SEC"] = str(max(5, min(60, dur_var.get())))
-        except Exception:
-            values["RECORD_DURATION_SEC"] = "10"
+        values["RECORD_DURATION_SEC"] = _bounded_int_value(
+            dur_var,
+            minimum=5,
+            maximum=60,
+            default=10,
+        )
         values["LOG_LEVEL"] = log_var.get().strip().upper() or "INFO"
 
         values["UI_BACKGROUND"] = ui_bg_var.get().strip() or "#181818"
@@ -320,22 +330,25 @@ def show_config_dialog(parent, app_service: Any | None = None) -> bool:
         values["UI_BUTTON_FG_CANCEL"] = ui_btn_cancel_var.get().strip() or "red2"
         values["UI_BUTTON_FG_ACCENT2"] = ui_btn_accent_var.get().strip() or "yellow"
         values["UI_FONT_FAMILY"] = ui_font_family_var.get().strip() or "Bahnschrift"
-        try:
-            values["UI_FONT_SIZE"] = str(max(8, min(72, ui_font_size_var.get())))
-        except Exception:
-            values["UI_FONT_SIZE"] = "18"
-        try:
-            values["UI_PADDING"] = str(max(2, min(30, ui_padding_var.get())))
-        except Exception:
-            values["UI_PADDING"] = "8"
-        try:
-            values["UI_BUTTON_WIDTH"] = str(max(5, min(50, ui_btn_width_var.get())))
-        except Exception:
-            values["UI_BUTTON_WIDTH"] = "12"
-        try:
-            values["UI_BUTTON_WIDTH_WIDE"] = str(max(10, min(50, ui_btn_width_wide_var.get())))
-        except Exception:
-            values["UI_BUTTON_WIDTH_WIDE"] = "20"
+        values["UI_FONT_SIZE"] = _bounded_int_value(
+            ui_font_size_var,
+            minimum=8,
+            maximum=72,
+            default=18,
+        )
+        values["UI_PADDING"] = _bounded_int_value(ui_padding_var, minimum=2, maximum=30, default=8)
+        values["UI_BUTTON_WIDTH"] = _bounded_int_value(
+            ui_btn_width_var,
+            minimum=5,
+            maximum=50,
+            default=12,
+        )
+        values["UI_BUTTON_WIDTH_WIDE"] = _bounded_int_value(
+            ui_btn_width_wide_var,
+            minimum=10,
+            maximum=50,
+            default=20,
+        )
 
         env_path = Path(__file__).resolve().parent.parent.parent.parent / ".env"
         write_env_file(env_path, values)

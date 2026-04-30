@@ -18,6 +18,14 @@ from core.repository import RepositoryPaths, StateRepository  # noqa: E402
 from core.service import AppService  # noqa: E402
 
 
+def _cleanup_temp_file(path: Path) -> None:
+    """Remove a temporary file without failing on cleanup-only I/O errors."""
+    try:
+        path.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
 @pytest.fixture
 def app_service() -> AppService:
     """Provide isolated AppService instance with temporary files."""
@@ -43,7 +51,4 @@ def app_service() -> AppService:
     )
     yield service
     for path in (profile_file, history_file, legacy_file, key_file):
-        try:
-            path.unlink(missing_ok=True)
-        except Exception:
-            pass
+        _cleanup_temp_file(path)

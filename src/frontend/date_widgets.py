@@ -54,6 +54,26 @@ class DateEntryAdapter:
             return
         self.widget.set_date(value)
 
+    def clear(self) -> None:
+        """Clear the current date text."""
+        if hasattr(self.widget, "delete"):
+            self.widget.delete(0, "end")
+
+    def get_optional_date(self) -> date | None:
+        """Read selected date or return None when the field is blank."""
+        if hasattr(self.widget, "get"):
+            raw_value = str(self.widget.get()).strip()
+            if not raw_value:
+                return None
+        return self.get_date()
+
+    def set_optional_date(self, value: date | None) -> None:
+        """Set selected date or clear the field when value is None."""
+        if value is None:
+            self.clear()
+            return
+        self.set_date(value)
+
 
 def _calendar_font() -> tuple[str, int]:
     """Get calendar/input font from project theme."""

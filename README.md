@@ -61,6 +61,14 @@ chmod +x install.sh
 
 Todo se ejecuta sobre `.venv` (no usa el Python global del sistema para correr la app).
 
+## Dónde se guardan los datos
+
+- Por defecto, TransTools guarda los datos de usuario en una carpeta de usuario del sistema:
+  - Windows: `%APPDATA%\TransTools`
+  - Linux: `${XDG_DATA_HOME:-~/.local/share}/transtools`
+- Si antes usabas el directorio legacy `output/` del proyecto, la app migra automáticamente los archivos de datos la primera vez que arranca con la nueva configuración.
+- Si defines `FILE_OUTPUT_DIR` en `.env`, ese valor se respeta como carpeta personalizada.
+
 ## Estructura técnica
 
 - `src/frontend/`: UI Tkinter (ventanas y diálogos)
@@ -81,4 +89,3 @@ Todo se ejecuta sobre `.venv` (no usa el Python global del sistema para correr l
 ## Descargo
 
 TransTools no sustituye atención sanitaria profesional y no emite diagnóstico clínico.
-
