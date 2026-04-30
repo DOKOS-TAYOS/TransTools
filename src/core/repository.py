@@ -20,6 +20,7 @@ from config.paths import (
 )
 from utils import DataStoreError, get_logger
 from utils.datetime_utils import utc_now_iso
+from utils.text_normalization import normalize_habit_id
 
 logger = get_logger(__name__)
 
@@ -44,225 +45,227 @@ class RepositoryPaths:
 
 def _default_habit_catalog() -> list[dict[str, Any]]:
     """Default habit set for adaptive checklist."""
-    return [
-        {"id": "hidratarse", "kind": "fisico", "min_level": 1},
-        {"id": "dormir", "kind": "fisico", "min_level": 1},
-        {"id": "caminar", "kind": "fisico", "min_level": 1},
-        {"id": "respirar", "kind": "psicologico", "min_level": 1},
-        {"id": "diario", "kind": "psicologico", "min_level": 1},
-        {"id": "desconexion", "kind": "psicologico", "min_level": 2},
-        {"id": "estiramientos", "kind": "fisico", "min_level": 2},
-        {"id": "alimentacion", "kind": "fisico", "min_level": 2},
-        {"id": "red_apoyo", "kind": "psicologico", "min_level": 2},
-        {"id": "autocuidado", "kind": "psicologico", "min_level": 3},
-        # Physical - Level 1
-        {"id": "desayuno_saludable", "kind": "fisico", "min_level": 1},
-        {"id": "levantarse_temprano", "kind": "fisico", "min_level": 1},
-        {"id": "subir_escaleras", "kind": "fisico", "min_level": 1},
-        {"id": "postura_ergonomica", "kind": "fisico", "min_level": 1},
-        {"id": "exposicion_solar", "kind": "fisico", "min_level": 1},
-        {"id": "lavarse_dientes", "kind": "fisico", "min_level": 1},
-        {"id": "dormir_horario", "kind": "fisico", "min_level": 1},
-        {"id": "evitar_cafeina_tarde", "kind": "fisico", "min_level": 1},
-        {"id": "comer_frutas", "kind": "fisico", "min_level": 1},
-        {"id": "comer_verduras", "kind": "fisico", "min_level": 1},
-        {"id": "evitar_azucar", "kind": "fisico", "min_level": 1},
-        {"id": "comer_fibra", "kind": "fisico", "min_level": 1},
-        {"id": "proteina_vegetal", "kind": "fisico", "min_level": 1},
-        {"id": "comer_lento", "kind": "fisico", "min_level": 1},
-        {"id": "no_comer_tarde", "kind": "fisico", "min_level": 1},
-        # Physical - Level 2
-        {"id": "correr", "kind": "fisico", "min_level": 2},
-        {"id": "bici", "kind": "fisico", "min_level": 2},
-        {"id": "natacion", "kind": "fisico", "min_level": 2},
-        {"id": "yoga", "kind": "fisico", "min_level": 2},
-        {"id": "pilates", "kind": "fisico", "min_level": 2},
-        {"id": "gimnasio", "kind": "fisico", "min_level": 2},
-        {"id": "estiramientos_mañana", "kind": "fisico", "min_level": 2},
-        {"id": "masaje", "kind": "fisico", "min_level": 2},
-        {"id": "sauna", "kind": "fisico", "min_level": 2},
-        {"id": "ducha_fria", "kind": "fisico", "min_level": 2},
-        {"id": "suplementos_vitaminas", "kind": "fisico", "min_level": 2},
-        {"id": "comer_fuera", "kind": "fisico", "min_level": 2},
-        {"id": "cocinar_casero", "kind": "fisico", "min_level": 2},
-        {"id": "merienda_saludable", "kind": "fisico", "min_level": 2},
-        {"id": "hidratarse_8_vasos", "kind": "fisico", "min_level": 2},
-        {"id": "evitar_alcohol", "kind": "fisico", "min_level": 2},
-        {"id": "evitar_tabaco", "kind": "fisico", "min_level": 2},
-        {"id": "revisar_medicacion", "kind": "fisico", "min_level": 2},
-        {"id": "revision_medica", "kind": "fisico", "min_level": 2},
-        {"id": "peso_saludable", "kind": "fisico", "min_level": 2},
-        # Physical - Level 3
-        {"id": "entrenamiento_fuerza", "kind": "fisico", "min_level": 3},
-        {"id": "cardio_intenso", "kind": "fisico", "min_level": 3},
-        {"id": "ayuno_intermitente", "kind": "fisico", "min_level": 3},
-        {"id": "dieta_mediterranea", "kind": "fisico", "min_level": 3},
-        {"id": "sueno_consistente", "kind": "fisico", "min_level": 3},
-        {"id": "rutina_nocturna", "kind": "fisico", "min_level": 3},
-        # Psychological - Level 1
-        {"id": "despertar_agradecido", "kind": "psicologico", "min_level": 1},
-        {"id": "respirar_profundo", "kind": "psicologico", "min_level": 1},
-        {"id": "sonreir", "kind": "psicologico", "min_level": 1},
-        {"id": "escuchar_musica", "kind": "psicologico", "min_level": 1},
-        {"id": "leer_10_min", "kind": "psicologico", "min_level": 1},
-        {"id": "afirmaciones", "kind": "psicologico", "min_level": 1},
-        {"id": "visualizar_positivo", "kind": "psicologico", "min_level": 1},
-        {"id": "pausa_corta", "kind": "psicologico", "min_level": 1},
-        {"id": "contacto_naturaleza", "kind": "psicologico", "min_level": 1},
-        {"id": "abrazar_alguien", "kind": "psicologico", "min_level": 1},
-        {"id": "decir_gracias", "kind": "psicologico", "min_level": 1},
-        {"id": "felicitar_alguien", "kind": "psicologico", "min_level": 1},
-        {"id": "limitar_noticias", "kind": "psicologico", "min_level": 1},
-        {"id": "ordenar_espacio", "kind": "psicologico", "min_level": 1},
-        {"id": "hacer_una_cosa", "kind": "psicologico", "min_level": 1},
-        # Psychological - Level 2
-        {"id": "meditacion", "kind": "psicologico", "min_level": 2},
-        {"id": "diario_gratitud", "kind": "psicologico", "min_level": 2},
-        {"id": "diario_emociones", "kind": "psicologico", "min_level": 2},
-        {"id": "mindfulness", "kind": "psicologico", "min_level": 2},
-        {"id": "pausa_pantallas", "kind": "psicologico", "min_level": 2},
-        {"id": "hobby_creativo", "kind": "psicologico", "min_level": 2},
-        {"id": "pintar_dibujar", "kind": "psicologico", "min_level": 2},
-        {"id": "jardineria", "kind": "psicologico", "min_level": 2},
-        {"id": "pasear_perro", "kind": "psicologico", "min_level": 2},
-        {"id": "llamar_amigo", "kind": "psicologico", "min_level": 2},
-        {"id": "quedar_persona", "kind": "psicologico", "min_level": 2},
-        {"id": "decir_no", "kind": "psicologico", "min_level": 2},
-        {"id": "pedir_ayuda", "kind": "psicologico", "min_level": 2},
-        {"id": "perdonarse", "kind": "psicologico", "min_level": 2},
-        {"id": "celebrar_logro", "kind": "psicologico", "min_level": 2},
-        {"id": "listar_logros", "kind": "psicologico", "min_level": 2},
-        {"id": "planificar_dia", "kind": "psicologico", "min_level": 2},
-        {"id": "priorizar_tareas", "kind": "psicologico", "min_level": 2},
-        {"id": "delegar", "kind": "psicologico", "min_level": 2},
-        {"id": "aprender_algo", "kind": "psicologico", "min_level": 2},
-        {"id": "podcast_inspirador", "kind": "psicologico", "min_level": 2},
-        {"id": "documental", "kind": "psicologico", "min_level": 2},
-        {"id": "baño_relajante", "kind": "psicologico", "min_level": 2},
-        {"id": "crema_hidratante", "kind": "psicologico", "min_level": 2},
-        {"id": "vestirse_bien", "kind": "psicologico", "min_level": 2},
-        {"id": "limitar_redes", "kind": "psicologico", "min_level": 2},
-        {"id": "modo_no_molestar", "kind": "psicologico", "min_level": 2},
-        # Psychological - Level 3
-        {"id": "terapia", "kind": "psicologico", "min_level": 3},
-        {"id": "grupo_apoyo", "kind": "psicologico", "min_level": 3},
-        {"id": "retiro_digital", "kind": "psicologico", "min_level": 3},
-        {"id": "diario_profundo", "kind": "psicologico", "min_level": 3},
-        {"id": "revision_semanal", "kind": "psicologico", "min_level": 3},
-        {"id": "objetivos_trimestre", "kind": "psicologico", "min_level": 3},
-        {"id": "voluntariado", "kind": "psicologico", "min_level": 3},
-        {"id": "mentor_otros", "kind": "psicologico", "min_level": 3},
-        {"id": "meditacion_larga", "kind": "psicologico", "min_level": 3},
-        {"id": "retiro_naturaleza", "kind": "psicologico", "min_level": 3},
-        # Batch 2 - Physical Level 1
-        {"id": "enjuague_bucal", "kind": "fisico", "min_level": 1},
-        {"id": "hilo_dental", "kind": "fisico", "min_level": 1},
-        {"id": "protector_solar", "kind": "fisico", "min_level": 1},
-        {"id": "ventilar_habitacion", "kind": "fisico", "min_level": 1},
-        {"id": "cambiar_sabanas", "kind": "fisico", "min_level": 1},
-        {"id": "comer_legumbres", "kind": "fisico", "min_level": 1},
-        {"id": "frutos_secos", "kind": "fisico", "min_level": 1},
-        {"id": "semillas", "kind": "fisico", "min_level": 1},
-        {"id": "aceite_oliva", "kind": "fisico", "min_level": 1},
-        {"id": "pescado_azul", "kind": "fisico", "min_level": 1},
-        {"id": "evitar_procesados", "kind": "fisico", "min_level": 1},
-        {"id": "desayunar_proteina", "kind": "fisico", "min_level": 1},
-        {"id": "merendar_fruta", "kind": "fisico", "min_level": 1},
-        {"id": "beber_infusion", "kind": "fisico", "min_level": 1},
-        {"id": "limitar_sal", "kind": "fisico", "min_level": 1},
-        # Batch 2 - Physical Level 2
-        {"id": "senderismo", "kind": "fisico", "min_level": 2},
-        {"id": "bailar", "kind": "fisico", "min_level": 2},
-        {"id": "escalada", "kind": "fisico", "min_level": 2},
-        {"id": "patinar", "kind": "fisico", "min_level": 2},
-        {"id": "remar", "kind": "fisico", "min_level": 2},
-        {"id": "tenis", "kind": "fisico", "min_level": 2},
-        {"id": "padel", "kind": "fisico", "min_level": 2},
-        {"id": "futbol", "kind": "fisico", "min_level": 2},
-        {"id": "estiramiento_cuello", "kind": "fisico", "min_level": 2},
-        {"id": "estiramiento_espalda", "kind": "fisico", "min_level": 2},
-        {"id": "rodillo_espuma", "kind": "fisico", "min_level": 2},
-        {"id": "dormir_siesta_corta", "kind": "fisico", "min_level": 2},
-        {"id": "revisar_vista", "kind": "fisico", "min_level": 2},
-        {"id": "revisar_dental", "kind": "fisico", "min_level": 2},
-        {"id": "analitica_sangre", "kind": "fisico", "min_level": 2},
-        {"id": "vacuna_actualizada", "kind": "fisico", "min_level": 2},
-        {"id": "hidratar_piel", "kind": "fisico", "min_level": 2},
-        {"id": "cuidar_unas", "kind": "fisico", "min_level": 2},
-        {"id": "peinar_cabello", "kind": "fisico", "min_level": 2},
-        # Batch 2 - Physical Level 3
-        {"id": "crossfit", "kind": "fisico", "min_level": 3},
-        {"id": "boxeo", "kind": "fisico", "min_level": 3},
-        {"id": "maraton_entrenar", "kind": "fisico", "min_level": 3},
-        {"id": "triatlon", "kind": "fisico", "min_level": 3},
-        {"id": "dieta_plant_based", "kind": "fisico", "min_level": 3},
-        {"id": "sueno_ritual", "kind": "fisico", "min_level": 3},
-        # Batch 2 - Psychological Level 1
-        {"id": "cantar", "kind": "psicologico", "min_level": 1},
-        {"id": "bailar_solo", "kind": "psicologico", "min_level": 1},
-        {"id": "ver_comedia", "kind": "psicologico", "min_level": 1},
-        {"id": "foto_bonita", "kind": "psicologico", "min_level": 1},
-        {"id": "recordar_momento_feliz", "kind": "psicologico", "min_level": 1},
-        {"id": "escribir_postal", "kind": "psicologico", "min_level": 1},
-        {"id": "regalar_algo", "kind": "psicologico", "min_level": 1},
-        {"id": "elogiar_trabajo", "kind": "psicologico", "min_level": 1},
-        {"id": "escuchar_podcast", "kind": "psicologico", "min_level": 1},
-        {"id": "audiobook", "kind": "psicologico", "min_level": 1},
-        {"id": "limpiar_mesa", "kind": "psicologico", "min_level": 1},
-        {"id": "tirar_objetos", "kind": "psicologico", "min_level": 1},
-        {"id": "organizar_armario", "kind": "psicologico", "min_level": 1},
-        {"id": "regar_plantas", "kind": "psicologico", "min_level": 1},
-        {"id": "mirar_cielo", "kind": "psicologico", "min_level": 1},
-        # Batch 2 - Psychological Level 2
-        {"id": "tecnicas_respiracion", "kind": "psicologico", "min_level": 2},
-        {"id": "body_scan", "kind": "psicologico", "min_level": 2},
-        {"id": "diario_suenos", "kind": "psicologico", "min_level": 2},
-        {"id": "escribir_carta", "kind": "psicologico", "min_level": 2},
-        {"id": "fotografia", "kind": "psicologico", "min_level": 2},
-        {"id": "escribir_poesia", "kind": "psicologico", "min_level": 2},
-        {"id": "tocar_instrumento", "kind": "psicologico", "min_level": 2},
-        {"id": "manualidades", "kind": "psicologico", "min_level": 2},
-        {"id": "costura", "kind": "psicologico", "min_level": 2},
-        {"id": "cocinar_nueva_receta", "kind": "psicologico", "min_level": 2},
-        {"id": "reunion_familiar", "kind": "psicologico", "min_level": 2},
-        {"id": "video_call_ser", "kind": "psicologico", "min_level": 2},
-        {"id": "unirse_club", "kind": "psicologico", "min_level": 2},
-        {"id": "asistir_evento", "kind": "psicologico", "min_level": 2},
-        {"id": "rechazar_invitacion", "kind": "psicologico", "min_level": 2},
-        {"id": "establecer_limite", "kind": "psicologico", "min_level": 2},
-        {"id": "aceptar_elogio", "kind": "psicologico", "min_level": 2},
-        {"id": "reconocer_error", "kind": "psicologico", "min_level": 2},
-        {"id": "pedir_opinion", "kind": "psicologico", "min_level": 2},
-        {"id": "feedback_constructivo", "kind": "psicologico", "min_level": 2},
-        {"id": "lista_tareas", "kind": "psicologico", "min_level": 2},
-        {"id": "bloquear_tiempo", "kind": "psicologico", "min_level": 2},
-        {"id": "revisar_objetivos", "kind": "psicologico", "min_level": 2},
-        {"id": "curso_online", "kind": "psicologico", "min_level": 2},
-        {"id": "leer_articulo", "kind": "psicologico", "min_level": 2},
-        {"id": "ver_ted_talk", "kind": "psicologico", "min_level": 2},
-        {"id": "mascarilla_facial", "kind": "psicologico", "min_level": 2},
-        {"id": "automasaje", "kind": "psicologico", "min_level": 2},
-        {"id": "aromaterapia", "kind": "psicologico", "min_level": 2},
-        {"id": "vela_relajante", "kind": "psicologico", "min_level": 2},
-        {"id": "apagar_notificaciones", "kind": "psicologico", "min_level": 2},
-        {"id": "horario_pantallas", "kind": "psicologico", "min_level": 2},
-        {"id": "dormir_sin_movil", "kind": "psicologico", "min_level": 2},
-        # Batch 2 - Psychological Level 3
-        {"id": "coaching", "kind": "psicologico", "min_level": 3},
-        {"id": "grupo_lectura", "kind": "psicologico", "min_level": 3},
-        {"id": "retiro_silencio", "kind": "psicologico", "min_level": 3},
-        {"id": "diario_reflexion", "kind": "psicologico", "min_level": 3},
-        {"id": "vision_board", "kind": "psicologico", "min_level": 3},
-        {"id": "valores_personales", "kind": "psicologico", "min_level": 3},
-        {"id": "ayudar_vecino", "kind": "psicologico", "min_level": 3},
-        {"id": "donar_ropa", "kind": "psicologico", "min_level": 3},
-        {"id": "ensenar_skill", "kind": "psicologico", "min_level": 3},
-        {"id": "retiro_meditacion", "kind": "psicologico", "min_level": 3},
-        {"id": "viaje_solo", "kind": "psicologico", "min_level": 3},
-        {"id": "practicar_empatia", "kind": "psicologico", "min_level": 2},
-        {"id": "escuchar_activamente", "kind": "psicologico", "min_level": 2},
-        {"id": "celebrar_pequeno_logro", "kind": "psicologico", "min_level": 1},
-    ]
+    return _normalize_habit_catalog(
+        [
+            {"id": "hidratarse", "kind": "fisico", "min_level": 1},
+            {"id": "dormir", "kind": "fisico", "min_level": 1},
+            {"id": "caminar", "kind": "fisico", "min_level": 1},
+            {"id": "respirar", "kind": "psicologico", "min_level": 1},
+            {"id": "diario", "kind": "psicologico", "min_level": 1},
+            {"id": "desconexion", "kind": "psicologico", "min_level": 2},
+            {"id": "estiramientos", "kind": "fisico", "min_level": 2},
+            {"id": "alimentacion", "kind": "fisico", "min_level": 2},
+            {"id": "red_apoyo", "kind": "psicologico", "min_level": 2},
+            {"id": "autocuidado", "kind": "psicologico", "min_level": 3},
+            # Physical - Level 1
+            {"id": "desayuno_saludable", "kind": "fisico", "min_level": 1},
+            {"id": "levantarse_temprano", "kind": "fisico", "min_level": 1},
+            {"id": "subir_escaleras", "kind": "fisico", "min_level": 1},
+            {"id": "postura_ergonomica", "kind": "fisico", "min_level": 1},
+            {"id": "exposicion_solar", "kind": "fisico", "min_level": 1},
+            {"id": "lavarse_dientes", "kind": "fisico", "min_level": 1},
+            {"id": "dormir_horario", "kind": "fisico", "min_level": 1},
+            {"id": "evitar_cafeina_tarde", "kind": "fisico", "min_level": 1},
+            {"id": "comer_frutas", "kind": "fisico", "min_level": 1},
+            {"id": "comer_verduras", "kind": "fisico", "min_level": 1},
+            {"id": "evitar_azucar", "kind": "fisico", "min_level": 1},
+            {"id": "comer_fibra", "kind": "fisico", "min_level": 1},
+            {"id": "proteina_vegetal", "kind": "fisico", "min_level": 1},
+            {"id": "comer_lento", "kind": "fisico", "min_level": 1},
+            {"id": "no_comer_tarde", "kind": "fisico", "min_level": 1},
+            # Physical - Level 2
+            {"id": "correr", "kind": "fisico", "min_level": 2},
+            {"id": "bici", "kind": "fisico", "min_level": 2},
+            {"id": "natacion", "kind": "fisico", "min_level": 2},
+            {"id": "yoga", "kind": "fisico", "min_level": 2},
+            {"id": "pilates", "kind": "fisico", "min_level": 2},
+            {"id": "gimnasio", "kind": "fisico", "min_level": 2},
+            {"id": "estiramientos_mañana", "kind": "fisico", "min_level": 2},
+            {"id": "masaje", "kind": "fisico", "min_level": 2},
+            {"id": "sauna", "kind": "fisico", "min_level": 2},
+            {"id": "ducha_fria", "kind": "fisico", "min_level": 2},
+            {"id": "suplementos_vitaminas", "kind": "fisico", "min_level": 2},
+            {"id": "comer_fuera", "kind": "fisico", "min_level": 2},
+            {"id": "cocinar_casero", "kind": "fisico", "min_level": 2},
+            {"id": "merienda_saludable", "kind": "fisico", "min_level": 2},
+            {"id": "hidratarse_8_vasos", "kind": "fisico", "min_level": 2},
+            {"id": "evitar_alcohol", "kind": "fisico", "min_level": 2},
+            {"id": "evitar_tabaco", "kind": "fisico", "min_level": 2},
+            {"id": "revisar_medicacion", "kind": "fisico", "min_level": 2},
+            {"id": "revision_medica", "kind": "fisico", "min_level": 2},
+            {"id": "peso_saludable", "kind": "fisico", "min_level": 2},
+            # Physical - Level 3
+            {"id": "entrenamiento_fuerza", "kind": "fisico", "min_level": 3},
+            {"id": "cardio_intenso", "kind": "fisico", "min_level": 3},
+            {"id": "ayuno_intermitente", "kind": "fisico", "min_level": 3},
+            {"id": "dieta_mediterranea", "kind": "fisico", "min_level": 3},
+            {"id": "sueno_consistente", "kind": "fisico", "min_level": 3},
+            {"id": "rutina_nocturna", "kind": "fisico", "min_level": 3},
+            # Psychological - Level 1
+            {"id": "despertar_agradecido", "kind": "psicologico", "min_level": 1},
+            {"id": "respirar_profundo", "kind": "psicologico", "min_level": 1},
+            {"id": "sonreir", "kind": "psicologico", "min_level": 1},
+            {"id": "escuchar_musica", "kind": "psicologico", "min_level": 1},
+            {"id": "leer_10_min", "kind": "psicologico", "min_level": 1},
+            {"id": "afirmaciones", "kind": "psicologico", "min_level": 1},
+            {"id": "visualizar_positivo", "kind": "psicologico", "min_level": 1},
+            {"id": "pausa_corta", "kind": "psicologico", "min_level": 1},
+            {"id": "contacto_naturaleza", "kind": "psicologico", "min_level": 1},
+            {"id": "abrazar_alguien", "kind": "psicologico", "min_level": 1},
+            {"id": "decir_gracias", "kind": "psicologico", "min_level": 1},
+            {"id": "felicitar_alguien", "kind": "psicologico", "min_level": 1},
+            {"id": "limitar_noticias", "kind": "psicologico", "min_level": 1},
+            {"id": "ordenar_espacio", "kind": "psicologico", "min_level": 1},
+            {"id": "hacer_una_cosa", "kind": "psicologico", "min_level": 1},
+            # Psychological - Level 2
+            {"id": "meditacion", "kind": "psicologico", "min_level": 2},
+            {"id": "diario_gratitud", "kind": "psicologico", "min_level": 2},
+            {"id": "diario_emociones", "kind": "psicologico", "min_level": 2},
+            {"id": "mindfulness", "kind": "psicologico", "min_level": 2},
+            {"id": "pausa_pantallas", "kind": "psicologico", "min_level": 2},
+            {"id": "hobby_creativo", "kind": "psicologico", "min_level": 2},
+            {"id": "pintar_dibujar", "kind": "psicologico", "min_level": 2},
+            {"id": "jardineria", "kind": "psicologico", "min_level": 2},
+            {"id": "pasear_perro", "kind": "psicologico", "min_level": 2},
+            {"id": "llamar_amigo", "kind": "psicologico", "min_level": 2},
+            {"id": "quedar_persona", "kind": "psicologico", "min_level": 2},
+            {"id": "decir_no", "kind": "psicologico", "min_level": 2},
+            {"id": "pedir_ayuda", "kind": "psicologico", "min_level": 2},
+            {"id": "perdonarse", "kind": "psicologico", "min_level": 2},
+            {"id": "celebrar_logro", "kind": "psicologico", "min_level": 2},
+            {"id": "listar_logros", "kind": "psicologico", "min_level": 2},
+            {"id": "planificar_dia", "kind": "psicologico", "min_level": 2},
+            {"id": "priorizar_tareas", "kind": "psicologico", "min_level": 2},
+            {"id": "delegar", "kind": "psicologico", "min_level": 2},
+            {"id": "aprender_algo", "kind": "psicologico", "min_level": 2},
+            {"id": "podcast_inspirador", "kind": "psicologico", "min_level": 2},
+            {"id": "documental", "kind": "psicologico", "min_level": 2},
+            {"id": "baño_relajante", "kind": "psicologico", "min_level": 2},
+            {"id": "crema_hidratante", "kind": "psicologico", "min_level": 2},
+            {"id": "vestirse_bien", "kind": "psicologico", "min_level": 2},
+            {"id": "limitar_redes", "kind": "psicologico", "min_level": 2},
+            {"id": "modo_no_molestar", "kind": "psicologico", "min_level": 2},
+            # Psychological - Level 3
+            {"id": "terapia", "kind": "psicologico", "min_level": 3},
+            {"id": "grupo_apoyo", "kind": "psicologico", "min_level": 3},
+            {"id": "retiro_digital", "kind": "psicologico", "min_level": 3},
+            {"id": "diario_profundo", "kind": "psicologico", "min_level": 3},
+            {"id": "revision_semanal", "kind": "psicologico", "min_level": 3},
+            {"id": "objetivos_trimestre", "kind": "psicologico", "min_level": 3},
+            {"id": "voluntariado", "kind": "psicologico", "min_level": 3},
+            {"id": "mentor_otros", "kind": "psicologico", "min_level": 3},
+            {"id": "meditacion_larga", "kind": "psicologico", "min_level": 3},
+            {"id": "retiro_naturaleza", "kind": "psicologico", "min_level": 3},
+            # Batch 2 - Physical Level 1
+            {"id": "enjuague_bucal", "kind": "fisico", "min_level": 1},
+            {"id": "hilo_dental", "kind": "fisico", "min_level": 1},
+            {"id": "protector_solar", "kind": "fisico", "min_level": 1},
+            {"id": "ventilar_habitacion", "kind": "fisico", "min_level": 1},
+            {"id": "cambiar_sabanas", "kind": "fisico", "min_level": 1},
+            {"id": "comer_legumbres", "kind": "fisico", "min_level": 1},
+            {"id": "frutos_secos", "kind": "fisico", "min_level": 1},
+            {"id": "semillas", "kind": "fisico", "min_level": 1},
+            {"id": "aceite_oliva", "kind": "fisico", "min_level": 1},
+            {"id": "pescado_azul", "kind": "fisico", "min_level": 1},
+            {"id": "evitar_procesados", "kind": "fisico", "min_level": 1},
+            {"id": "desayunar_proteina", "kind": "fisico", "min_level": 1},
+            {"id": "merendar_fruta", "kind": "fisico", "min_level": 1},
+            {"id": "beber_infusion", "kind": "fisico", "min_level": 1},
+            {"id": "limitar_sal", "kind": "fisico", "min_level": 1},
+            # Batch 2 - Physical Level 2
+            {"id": "senderismo", "kind": "fisico", "min_level": 2},
+            {"id": "bailar", "kind": "fisico", "min_level": 2},
+            {"id": "escalada", "kind": "fisico", "min_level": 2},
+            {"id": "patinar", "kind": "fisico", "min_level": 2},
+            {"id": "remar", "kind": "fisico", "min_level": 2},
+            {"id": "tenis", "kind": "fisico", "min_level": 2},
+            {"id": "padel", "kind": "fisico", "min_level": 2},
+            {"id": "futbol", "kind": "fisico", "min_level": 2},
+            {"id": "estiramiento_cuello", "kind": "fisico", "min_level": 2},
+            {"id": "estiramiento_espalda", "kind": "fisico", "min_level": 2},
+            {"id": "rodillo_espuma", "kind": "fisico", "min_level": 2},
+            {"id": "dormir_siesta_corta", "kind": "fisico", "min_level": 2},
+            {"id": "revisar_vista", "kind": "fisico", "min_level": 2},
+            {"id": "revisar_dental", "kind": "fisico", "min_level": 2},
+            {"id": "analitica_sangre", "kind": "fisico", "min_level": 2},
+            {"id": "vacuna_actualizada", "kind": "fisico", "min_level": 2},
+            {"id": "hidratar_piel", "kind": "fisico", "min_level": 2},
+            {"id": "cuidar_unas", "kind": "fisico", "min_level": 2},
+            {"id": "peinar_cabello", "kind": "fisico", "min_level": 2},
+            # Batch 2 - Physical Level 3
+            {"id": "crossfit", "kind": "fisico", "min_level": 3},
+            {"id": "boxeo", "kind": "fisico", "min_level": 3},
+            {"id": "maraton_entrenar", "kind": "fisico", "min_level": 3},
+            {"id": "triatlon", "kind": "fisico", "min_level": 3},
+            {"id": "dieta_plant_based", "kind": "fisico", "min_level": 3},
+            {"id": "sueno_ritual", "kind": "fisico", "min_level": 3},
+            # Batch 2 - Psychological Level 1
+            {"id": "cantar", "kind": "psicologico", "min_level": 1},
+            {"id": "bailar_solo", "kind": "psicologico", "min_level": 1},
+            {"id": "ver_comedia", "kind": "psicologico", "min_level": 1},
+            {"id": "foto_bonita", "kind": "psicologico", "min_level": 1},
+            {"id": "recordar_momento_feliz", "kind": "psicologico", "min_level": 1},
+            {"id": "escribir_postal", "kind": "psicologico", "min_level": 1},
+            {"id": "regalar_algo", "kind": "psicologico", "min_level": 1},
+            {"id": "elogiar_trabajo", "kind": "psicologico", "min_level": 1},
+            {"id": "escuchar_podcast", "kind": "psicologico", "min_level": 1},
+            {"id": "audiobook", "kind": "psicologico", "min_level": 1},
+            {"id": "limpiar_mesa", "kind": "psicologico", "min_level": 1},
+            {"id": "tirar_objetos", "kind": "psicologico", "min_level": 1},
+            {"id": "organizar_armario", "kind": "psicologico", "min_level": 1},
+            {"id": "regar_plantas", "kind": "psicologico", "min_level": 1},
+            {"id": "mirar_cielo", "kind": "psicologico", "min_level": 1},
+            # Batch 2 - Psychological Level 2
+            {"id": "tecnicas_respiracion", "kind": "psicologico", "min_level": 2},
+            {"id": "body_scan", "kind": "psicologico", "min_level": 2},
+            {"id": "diario_suenos", "kind": "psicologico", "min_level": 2},
+            {"id": "escribir_carta", "kind": "psicologico", "min_level": 2},
+            {"id": "fotografia", "kind": "psicologico", "min_level": 2},
+            {"id": "escribir_poesia", "kind": "psicologico", "min_level": 2},
+            {"id": "tocar_instrumento", "kind": "psicologico", "min_level": 2},
+            {"id": "manualidades", "kind": "psicologico", "min_level": 2},
+            {"id": "costura", "kind": "psicologico", "min_level": 2},
+            {"id": "cocinar_nueva_receta", "kind": "psicologico", "min_level": 2},
+            {"id": "reunion_familiar", "kind": "psicologico", "min_level": 2},
+            {"id": "video_call_ser", "kind": "psicologico", "min_level": 2},
+            {"id": "unirse_club", "kind": "psicologico", "min_level": 2},
+            {"id": "asistir_evento", "kind": "psicologico", "min_level": 2},
+            {"id": "rechazar_invitacion", "kind": "psicologico", "min_level": 2},
+            {"id": "establecer_limite", "kind": "psicologico", "min_level": 2},
+            {"id": "aceptar_elogio", "kind": "psicologico", "min_level": 2},
+            {"id": "reconocer_error", "kind": "psicologico", "min_level": 2},
+            {"id": "pedir_opinion", "kind": "psicologico", "min_level": 2},
+            {"id": "feedback_constructivo", "kind": "psicologico", "min_level": 2},
+            {"id": "lista_tareas", "kind": "psicologico", "min_level": 2},
+            {"id": "bloquear_tiempo", "kind": "psicologico", "min_level": 2},
+            {"id": "revisar_objetivos", "kind": "psicologico", "min_level": 2},
+            {"id": "curso_online", "kind": "psicologico", "min_level": 2},
+            {"id": "leer_articulo", "kind": "psicologico", "min_level": 2},
+            {"id": "ver_ted_talk", "kind": "psicologico", "min_level": 2},
+            {"id": "mascarilla_facial", "kind": "psicologico", "min_level": 2},
+            {"id": "automasaje", "kind": "psicologico", "min_level": 2},
+            {"id": "aromaterapia", "kind": "psicologico", "min_level": 2},
+            {"id": "vela_relajante", "kind": "psicologico", "min_level": 2},
+            {"id": "apagar_notificaciones", "kind": "psicologico", "min_level": 2},
+            {"id": "horario_pantallas", "kind": "psicologico", "min_level": 2},
+            {"id": "dormir_sin_movil", "kind": "psicologico", "min_level": 2},
+            # Batch 2 - Psychological Level 3
+            {"id": "coaching", "kind": "psicologico", "min_level": 3},
+            {"id": "grupo_lectura", "kind": "psicologico", "min_level": 3},
+            {"id": "retiro_silencio", "kind": "psicologico", "min_level": 3},
+            {"id": "diario_reflexion", "kind": "psicologico", "min_level": 3},
+            {"id": "vision_board", "kind": "psicologico", "min_level": 3},
+            {"id": "valores_personales", "kind": "psicologico", "min_level": 3},
+            {"id": "ayudar_vecino", "kind": "psicologico", "min_level": 3},
+            {"id": "donar_ropa", "kind": "psicologico", "min_level": 3},
+            {"id": "ensenar_skill", "kind": "psicologico", "min_level": 3},
+            {"id": "retiro_meditacion", "kind": "psicologico", "min_level": 3},
+            {"id": "viaje_solo", "kind": "psicologico", "min_level": 3},
+            {"id": "practicar_empatia", "kind": "psicologico", "min_level": 2},
+            {"id": "escuchar_activamente", "kind": "psicologico", "min_level": 2},
+            {"id": "celebrar_pequeno_logro", "kind": "psicologico", "min_level": 1},
+        ]
+    )
 
 
 def _merge_habit_catalog(
@@ -276,6 +279,50 @@ def _merge_habit_catalog(
             result.append(habit)
             existing_ids.add(habit["id"])
     return result
+
+
+def _normalize_habit_catalog(catalog: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Normalize habit catalog IDs and drop duplicates created by migration."""
+    normalized_catalog: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    for habit in catalog:
+        if not isinstance(habit, dict):
+            continue
+        raw_id = habit.get("id")
+        if not isinstance(raw_id, str) or not raw_id:
+            continue
+        normalized_id = normalize_habit_id(raw_id)
+        if not normalized_id or normalized_id in seen_ids:
+            continue
+        migrated_habit = dict(habit)
+        migrated_habit["id"] = normalized_id
+        normalized_catalog.append(migrated_habit)
+        seen_ids.add(normalized_id)
+    return normalized_catalog
+
+
+def _normalize_habit_id_list(values: list[str]) -> list[str]:
+    """Normalize persisted habit ID lists while preserving order."""
+    normalized_values: list[str] = []
+    seen_ids: set[str] = set()
+    for value in values:
+        if not isinstance(value, str):
+            continue
+        normalized_id = normalize_habit_id(value)
+        if not normalized_id or normalized_id in seen_ids:
+            continue
+        normalized_values.append(normalized_id)
+        seen_ids.add(normalized_id)
+    return normalized_values
+
+
+def _sanitize_meta(meta: dict[str, Any] | Any) -> dict[str, Any]:
+    """Drop deprecated meta fields while keeping supported values intact."""
+    if not isinstance(meta, dict):
+        return dict(default_profile_state()["meta"])
+    clean_meta = dict(meta)
+    clean_meta.pop("help_shown", None)
+    return clean_meta
 
 
 def default_profile_state() -> dict[str, Any]:
@@ -301,7 +348,6 @@ def default_profile_state() -> dict[str, Any]:
         "habit_catalog": _default_habit_catalog(),
         "meta": {
             "last_habit_count": 3,
-            "help_shown": False,
         },
     }
 
@@ -444,7 +490,7 @@ class StateRepository:
             "profile": state.get("profile", default_profile_state()["profile"]),
             "health_config": state.get("health_config", default_profile_state()["health_config"]),
             "habit_catalog": state.get("habit_catalog", default_profile_state()["habit_catalog"]),
-            "meta": state.get("meta", default_profile_state()["meta"]),
+            "meta": _sanitize_meta(state.get("meta", default_profile_state()["meta"])),
         }
         _atomic_save(self.paths.profile_file, profile)
 
@@ -460,8 +506,10 @@ class StateRepository:
             return default_profile_state()
         current = _deep_merge_defaults(raw, default_profile_state())
         current["schema_version"] = SCHEMA_VERSION
+        if isinstance(current.get("meta"), dict):
+            current["meta"].pop("help_shown", None)
         current["habit_catalog"] = _merge_habit_catalog(
-            current.get("habit_catalog", []),
+            _normalize_habit_catalog(current.get("habit_catalog", [])),
             _default_habit_catalog(),
         )
         return current
@@ -472,6 +520,11 @@ class StateRepository:
             return default_history_state()
         current = _deep_merge_defaults(raw, default_history_state())
         current["schema_version"] = SCHEMA_VERSION
+        for row in current["records"].get("habits", []):
+            if not isinstance(row, dict):
+                continue
+            row["shown_habits"] = _normalize_habit_id_list(row.get("shown_habits", []))
+            row["completed_habits"] = _normalize_habit_id_list(row.get("completed_habits", []))
         return current
 
     def _apply_legacy_bootstrap_if_available(self, state: dict[str, Any]) -> dict[str, Any]:

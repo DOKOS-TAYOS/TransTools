@@ -4,11 +4,28 @@ import json
 from pathlib import Path
 
 from config.env import get_env_from_schema
+from utils.text_normalization import normalize_habit_id, repair_mojibake_text
 
 _LOCALES_DIR = Path(__file__).resolve().parent / "locales"
 _CACHE: dict[str, dict[str, str]] = {}
 _DEFAULT_LANG = "es"
 _current_lang = "es"
+
+
+def _normalize_translation_key(key: str) -> str:
+    """Normalize translation keys tied to persisted habit identifiers."""
+    if key.startswith("habit.name."):
+        habit_id = key.removeprefix("habit.name.")
+        return f"habit.name.{normalize_habit_id(habit_id)}"
+    return key
+
+
+def _normalize_locale_payload(data: dict[str, str]) -> dict[str, str]:
+    """Normalize locale keys and repair common mojibake in values."""
+    normalized: dict[str, str] = {}
+    for key, value in data.items():
+        normalized[_normalize_translation_key(key)] = repair_mojibake_text(value)
+    return normalized
 
 
 def _load_locale(lang: str) -> dict[str, str]:
@@ -29,7 +46,7 @@ def _load_locale(lang: str) -> dict[str, str]:
             return {}
         return _load_locale(_DEFAULT_LANG)
     with open(path, encoding="utf-8-sig") as f:
-        data = json.load(f)
+        data = _normalize_locale_payload(json.load(f))
     _CACHE[lang] = data
     return data
 

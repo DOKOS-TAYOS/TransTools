@@ -40,11 +40,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Settings restart now relaunches the app through the resolved `src/main.py` path instead of depending on `sys.argv[0]`.
 - Medication startup reminders now stay compact by showing today's due warning plus one aggregated overdue summary.
 - Legacy data migration is now file-by-file, so existing destination files are preserved while any missing legacy files are still copied across.
+- Habit IDs with legacy mojibake or accents are now normalized to a stable ASCII form, with compatible migration for saved catalogs and checklist records.
 - Configuration dialog now also edits profile and health fields.
 - Obsolete `FILE_DATA_FORMAT` config is no longer emitted or treated as a supported setting.
 - Optional health dates in the unified data view no longer auto-save as "today" when left blank, and they can be cleared safely.
 - Configuration numeric fields now use narrower error handling instead of broad fallback catches.
+- Locale loading now repairs mojibake text at runtime and aligns habit-name translation keys with normalized IDs.
 - Pytest cacheprovider is now disabled in project config to avoid Windows permission warnings in this workspace.
+- Deprecated `meta.help_shown` is no longer emitted in new saved state, while older data remains readable.
 - Voice analysis now computes heuristic mood scores from acoustic features.
 - Voice recording can again be registered for a user-selected past date instead of always using the current day.
 - README updated to reflect full v1 scope and offline-first behavior.
