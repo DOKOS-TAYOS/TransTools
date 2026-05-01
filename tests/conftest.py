@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Generator
 from pathlib import Path
 from uuid import uuid4
 
@@ -27,7 +28,7 @@ def _cleanup_temp_file(path: Path) -> None:
 
 
 @pytest.fixture
-def app_service() -> AppService:
+def app_service() -> Generator[AppService, None, None]:
     """Provide isolated AppService instance with temporary files."""
     output_dir = (ROOT / "output").resolve()
     output_dir.mkdir(parents=True, exist_ok=True)

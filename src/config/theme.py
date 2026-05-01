@@ -1,12 +1,102 @@
 """UI theme configuration for TransTools."""
 
+from __future__ import annotations
+
 import re
-from tkinter import ttk
+from dataclasses import dataclass
+from tkinter import Misc, TclError, ttk
 from typing import Any
 
 from config.env import get_env_from_schema
 
 UI_STYLE: dict[str, Any] = {}
+
+
+@dataclass(frozen=True)
+class ThemeSurfacePalette:
+    """Derived surface colors used across interactive widgets."""
+
+    entry_bg: str
+    entry_hover: str
+    panel_bg: str
+    panel_border: str
+    check_bg: str
+    check_hover: str
+    check_active: str
+    check_disabled: str
+    tab_bg: str
+    tree_bg: str
+    tree_heading_bg: str
+    tree_selected_bg: str
+    listbox_bg: str
+    listbox_select_bg: str
+
+
+@dataclass(frozen=True)
+class ThemeSizing:
+    """Shared sizing values for themed widgets."""
+
+    button_padding: tuple[int, int]
+    summary_button_padding: tuple[int, int]
+    notebook_tab_padding: tuple[int, int]
+    tree_rowheight: int
+    spinbox_arrowsize: int
+    check_indicator_size: int
+
+
+def build_surface_palette(bg: str, btn_bg: str) -> ThemeSurfacePalette:
+    """Build a consistent non-white palette for compound ttk widgets."""
+    entry_bg = _adjust_hex_brightness(bg, 0.85)
+    entry_hover = _adjust_hex_brightness(entry_bg, 1.2)
+    panel_bg = _adjust_hex_brightness(bg, 0.92)
+    panel_border = _adjust_hex_brightness(bg, 1.28)
+    check_bg = _adjust_hex_brightness(bg, 1.10)
+    check_hover = _adjust_hex_brightness(bg, 1.22)
+    check_active = _adjust_hex_brightness(bg, 1.22)
+    check_disabled = _adjust_hex_brightness(bg, 0.96)
+    tab_bg = _adjust_hex_brightness(bg, 0.9)
+    tree_heading_bg = _adjust_hex_brightness(bg, 0.88)
+
+    return ThemeSurfacePalette(
+        entry_bg=entry_bg,
+        entry_hover=entry_hover,
+        panel_bg=panel_bg,
+        panel_border=panel_border,
+        check_bg=check_bg,
+        check_hover=check_hover,
+        check_active=check_active,
+        check_disabled=check_disabled,
+        tab_bg=tab_bg,
+        tree_bg=entry_bg,
+        tree_heading_bg=tree_heading_bg,
+        tree_selected_bg=btn_bg,
+        listbox_bg=entry_bg,
+        listbox_select_bg=btn_bg,
+    )
+
+
+def build_theme_sizing(font_size: int, padding: int) -> ThemeSizing:
+    """Build compact shared sizing values from the active font and padding."""
+    normalized_font_size = max(8, int(font_size))
+    normalized_padding = max(2, int(padding))
+    button_padding = (max(6, normalized_padding), max(4, normalized_padding - 2))
+    summary_button_padding = (max(6, normalized_padding), max(3, normalized_padding - 3))
+    notebook_tab_padding = (max(10, normalized_padding + 4), max(5, normalized_padding - 1))
+    tree_rowheight = max(normalized_font_size + normalized_padding + 4, 26)
+    spinbox_arrowsize = max(
+        normalized_font_size,
+        normalized_font_size + max(0, normalized_padding - 3),
+    )
+    check_indicator_size = max(12, normalized_font_size - 1)
+
+    return ThemeSizing(
+        button_padding=button_padding,
+        summary_button_padding=summary_button_padding,
+        notebook_tab_padding=notebook_tab_padding,
+        tree_rowheight=tree_rowheight,
+        spinbox_arrowsize=spinbox_arrowsize,
+        check_indicator_size=check_indicator_size,
+    )
 
 
 def _adjust_hex_brightness(hex_color: str, factor: float) -> str:
@@ -61,7 +151,7 @@ def refresh_theme() -> None:
     UI_STYLE = _build_ui_style()
 
 
-def configure_ttk_styles(root) -> None:
+def configure_ttk_styles(root: Misc) -> None:
     """Configure ttk styles with colors and fonts from config.
 
     Uses 'clam' theme to allow custom colors (vista/xpnative often ignore them).
@@ -72,7 +162,7 @@ def configure_ttk_styles(root) -> None:
     style = ttk.Style(root)
     try:
         style.theme_use("clam")
-    except ttk.TclError:
+    except TclError:
         pass  # Fallback to default if clam not available
 
     font = (UI_STYLE["font_family"], UI_STYLE["font_size"])
@@ -83,18 +173,11 @@ def configure_ttk_styles(root) -> None:
     btn_fg_cancel = UI_STYLE["button_fg_cancel"]
     btn_fg_accent = UI_STYLE["button_fg_accent"]
 
-    # Entry/Combobox/Spinbox: slightly darker than menu bg, hover slightly lighter
-    entry_bg = _adjust_hex_brightness(bg, 0.85)
-    entry_hover = _adjust_hex_brightness(entry_bg, 1.2)
+    palette = build_surface_palette(bg=bg, btn_bg=btn_bg)
+    sizing = build_theme_sizing(UI_STYLE["font_size"], UI_STYLE["padding"])
 
     # Buttons: slightly lighter on hover
     btn_hover = _adjust_hex_brightness(btn_bg, 1.2)
-
-    # Checkbox indicator: keep it very close to background to avoid harsh accents
-    check_bg = _adjust_hex_brightness(bg, 1.10)
-    check_hover = _adjust_hex_brightness(bg, 1.22)
-    check_active = _adjust_hex_brightness(bg, 1.22)
-    check_disabled = _adjust_hex_brightness(bg, 0.96)
 
     # TFrame - main background
     style.configure("TFrame", background=bg)
@@ -103,8 +186,23 @@ def configure_ttk_styles(root) -> None:
     style.configure("TLabel", background=bg, foreground=fg, font=font)
 
     # Small.TLabel - smaller text (e.g. descriptions)
-    font_small = (UI_STYLE["font_family"], max(8, int(UI_STYLE["font_size"] * 0.65)))
+    font_small = (UI_STYLE["font_family"], max(9, int(UI_STYLE["font_size"] * 0.72)))
     style.configure("Small.TLabel", background=bg, foreground=fg, font=font_small)
+
+    # TLabelframe - grouped areas
+    style.configure(
+        "TLabelframe",
+        background=palette.panel_bg,
+        borderwidth=1,
+        relief="solid",
+        bordercolor=palette.panel_border,
+    )
+    style.configure(
+        "TLabelframe.Label",
+        background=bg,
+        foreground=fg,
+        font=font,
+    )
 
     # TButton - primary buttons
     style.configure(
@@ -112,7 +210,7 @@ def configure_ttk_styles(root) -> None:
         background=btn_bg,
         foreground=btn_fg,
         font=font,
-        padding=(8, 6),
+        padding=sizing.button_padding,
     )
     style.map("TButton", background=[("active", btn_hover), ("pressed", btn_bg)])
 
@@ -122,7 +220,7 @@ def configure_ttk_styles(root) -> None:
         background=btn_bg,
         foreground=btn_fg_cancel,
         font=font,
-        padding=(8, 6),
+        padding=sizing.button_padding,
     )
     style.map("Danger.TButton", background=[("active", btn_hover), ("pressed", btn_bg)])
 
@@ -132,50 +230,69 @@ def configure_ttk_styles(root) -> None:
         background=btn_bg,
         foreground=btn_fg_accent,
         font=font,
-        padding=(8, 6),
+        padding=sizing.button_padding,
     )
     style.map("Accent.TButton", background=[("active", btn_hover), ("pressed", btn_bg)])
 
+    # SummaryToggle.TButton - smaller control for the collapsible quick summary.
+    summary_font = (UI_STYLE["font_family"], max(8, int(UI_STYLE["font_size"] * 0.78)))
+    style.configure(
+        "SummaryToggle.TButton",
+        background=btn_bg,
+        foreground=btn_fg,
+        font=summary_font,
+        padding=sizing.summary_button_padding,
+    )
+    style.map(
+        "SummaryToggle.TButton",
+        background=[("active", btn_hover), ("pressed", btn_bg)],
+    )
+
     # TEntry - text input (darker than bg, lighter on hover)
-    style.configure("TEntry", fieldbackground=entry_bg, foreground=fg, font=font)
-    style.map("TEntry", fieldbackground=[("active", entry_hover), ("focus", entry_hover)])
+    style.configure("TEntry", fieldbackground=palette.entry_bg, foreground=fg, font=font)
+    style.map(
+        "TEntry",
+        fieldbackground=[("active", palette.entry_hover), ("focus", palette.entry_hover)],
+    )
 
     # TCombobox - dropdown (darker than bg, lighter on hover)
     style.configure(
         "TCombobox",
-        fieldbackground=entry_bg,
+        fieldbackground=palette.entry_bg,
         foreground=fg,
-        background=entry_bg,
+        background=palette.entry_bg,
         arrowcolor=fg,
         font=font,
     )
     style.map(
         "TCombobox",
-        fieldbackground=[("readonly", entry_bg), ("active", entry_hover)],
-        background=[("active", entry_hover)],
+        fieldbackground=[("readonly", palette.entry_bg), ("active", palette.entry_hover)],
+        background=[("active", palette.entry_hover)],
     )
-    # Combobox dropdown listbox font (must be set via option_add; style only affects field)
+    # Combobox dropdown listbox colors must be configured via Tk options.
     root.option_add("*TCombobox*Listbox.font", f"{font[0]} {font[1]}")
+    root.option_add("*TCombobox*Listbox.background", palette.listbox_bg)
+    root.option_add("*TCombobox*Listbox.foreground", fg)
+    root.option_add("*TCombobox*Listbox.selectBackground", palette.listbox_select_bg)
+    root.option_add("*TCombobox*Listbox.selectForeground", fg)
 
     # TSpinbox - numeric spin (darker than bg, lighter on hover) (Python 3.11+)
-    # Arrows height = font_size + padding  // 2to match spinbox box height
-    spinbox_arrowsize = UI_STYLE["font_size"] + UI_STYLE["padding"] // 2
     try:
         style.configure(
             "TSpinbox",
-            fieldbackground=entry_bg,
+            fieldbackground=palette.entry_bg,
             foreground=fg,
-            background=entry_bg,
+            background=palette.entry_bg,
             arrowcolor=fg,
-            arrowsize=spinbox_arrowsize,
+            arrowsize=sizing.spinbox_arrowsize,
             font=font,
         )
         style.map(
             "TSpinbox",
-            fieldbackground=[("active", entry_hover), ("focus", entry_hover)],
-            background=[("active", entry_hover)],
+            fieldbackground=[("active", palette.entry_hover), ("focus", palette.entry_hover)],
+            background=[("active", palette.entry_hover)],
         )
-    except ttk.TclError:
+    except TclError:
         pass
 
     # TCheckbutton - checkbox (indicatorsize = font_size for proportional look)
@@ -184,18 +301,18 @@ def configure_ttk_styles(root) -> None:
         background=bg,
         foreground=fg,
         font=font,
-        indicatorsize=UI_STYLE["font_size"],
-        indicatorbackground=check_bg,
+        indicatorsize=sizing.check_indicator_size,
+        indicatorbackground=palette.check_bg,
         indicatorforeground=fg,
         indicatormargin=2,
     )
     style.map(
         "TCheckbutton",
-        background=[("active", check_hover), ("selected", bg)],
+        background=[("active", palette.check_hover), ("selected", bg)],
         indicatorbackground=[
-            ("selected", check_active),
-            ("active", check_hover),
-            ("disabled", check_disabled),
+            ("selected", palette.check_active),
+            ("active", palette.check_hover),
+            ("disabled", palette.check_disabled),
         ],
         indicatorforeground=[
             ("selected", fg),
@@ -203,24 +320,75 @@ def configure_ttk_styles(root) -> None:
         ],
     )
 
-    # TNotebook.Tab - larger tabs for config dialog
-    tab_pad_h = max(16, UI_STYLE["padding"] * 2)
-    tab_pad_v = max(8, UI_STYLE["padding"])
-    tab_bg = _adjust_hex_brightness(bg, 0.9)
+    # Treeview - keep tables aligned with the application palette.
+    style.configure(
+        "Treeview",
+        background=palette.tree_bg,
+        fieldbackground=palette.tree_bg,
+        foreground=fg,
+        font=font,
+        rowheight=sizing.tree_rowheight,
+        borderwidth=0,
+        relief="flat",
+    )
+    style.map(
+        "Treeview",
+        background=[("selected", palette.tree_selected_bg)],
+        foreground=[("selected", fg)],
+    )
+    style.configure(
+        "Treeview.Heading",
+        background=palette.tree_heading_bg,
+        foreground=fg,
+        font=font,
+        relief="flat",
+    )
+    style.map(
+        "Treeview.Heading",
+        background=[("active", palette.panel_bg)],
+        foreground=[("active", fg)],
+    )
+
     style.configure(
         "TNotebook",
-        background=bg,
+        background=palette.panel_bg,
         borderwidth=0,
         tabmargins=(0, 0, 0, 0),
     )
     style.configure(
         "TNotebook.Tab",
-        background=tab_bg,
+        background=palette.tab_bg,
         foreground=fg,
-        padding=(tab_pad_h, tab_pad_v),
+        padding=sizing.notebook_tab_padding,
         font=font,
     )
-    style.map("TNotebook.Tab", background=[("selected", bg), ("active", bg)])
+    style.map(
+        "TNotebook.Tab",
+        background=[("selected", palette.panel_bg), ("active", palette.panel_bg)],
+    )
+
+    style.configure(
+        "TScrollbar",
+        background=palette.panel_bg,
+        troughcolor=bg,
+        arrowcolor=fg,
+        bordercolor=palette.panel_border,
+    )
+
+    root.option_add("*Listbox.background", palette.listbox_bg)
+    root.option_add("*Listbox.foreground", fg)
+    root.option_add("*Listbox.selectBackground", palette.listbox_select_bg)
+    root.option_add("*Listbox.selectForeground", fg)
+    root.option_add("*Menu.background", palette.listbox_bg)
+    root.option_add("*Menu.foreground", fg)
+    root.option_add("*Menu.activeBackground", palette.listbox_select_bg)
+    root.option_add("*Menu.activeForeground", fg)
+
+
+def prepare_ttk_window(root: Misc) -> None:
+    """Refresh the theme and reapply shared ttk styling on a window."""
+    refresh_theme()
+    configure_ttk_styles(root)
 
 
 # Initialize on import

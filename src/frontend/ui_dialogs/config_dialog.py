@@ -6,7 +6,7 @@ from typing import Any
 
 from config import UI_STYLE, get_current_env_values, write_env_file
 from config.env import get_env_from_schema
-from config.theme import configure_ttk_styles, refresh_theme
+from config.theme import prepare_ttk_window
 from frontend.window_utils import place_window_centered
 from i18n import t
 
@@ -57,11 +57,10 @@ def show_config_dialog(parent, app_service: Any | None = None) -> bool:
         True if user saved and app should restart, False otherwise.
     """
     dlg = Toplevel(parent)
+    prepare_ttk_window(dlg)
     dlg.title(t("menu.config"))
     dlg.resizable(width=True, height=True)
     dlg.configure(background=UI_STYLE["bg"])
-    refresh_theme()
-    configure_ttk_styles(parent)
     _font = (UI_STYLE["font_family"], UI_STYLE["font_size"])
 
     result = {"saved": False}
@@ -334,9 +333,9 @@ def show_config_dialog(parent, app_service: Any | None = None) -> bool:
             ui_font_size_var,
             minimum=8,
             maximum=72,
-            default=18,
+            default=16,
         )
-        values["UI_PADDING"] = _bounded_int_value(ui_padding_var, minimum=2, maximum=30, default=8)
+        values["UI_PADDING"] = _bounded_int_value(ui_padding_var, minimum=2, maximum=30, default=6)
         values["UI_BUTTON_WIDTH"] = _bounded_int_value(
             ui_btn_width_var,
             minimum=5,

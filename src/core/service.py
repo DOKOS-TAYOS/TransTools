@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from uuid import uuid4
 
 import pandas as pd
@@ -17,12 +17,22 @@ from utils.datetime_utils import utc_now_iso
 
 from .privacy import VoicePrivacyService
 from .repository import ISO_DATE, StateRepository
-from .types import VoiceAnalysisResult
+from .types import (
+    AppointmentPrepRecord,
+    AppointmentType,
+    DashboardSnapshot,
+    JourneyStage,
+    Milestone,
+    RoadmapItem,
+    VoiceAnalysisResult,
+    WellbeingLog,
+)
 
 logger = get_logger(__name__)
 
 _MIN_HABITS = 3
 _MAX_HABITS = 8
+_POST_TRANSITION_PRIORITY = {"salud": 0, "bienestar": 1, "cirugias_recuperacion": 2}
 
 
 def _parse_iso_date(value: str | None) -> date | None:
@@ -169,6 +179,114 @@ class AppService:
         text = value.strip()
         return text or None
 
+    @staticmethod
+    def _coerce_journey_stage(value: str | None) -> JourneyStage:
+        """Normalize the persisted journey stage."""
+        if value == "post_transition":
+            return "post_transition"
+        return "transitioning"
+
+    @staticmethod
+    def _clamp_wellbeing_score(value: int) -> int:
+        """Clamp wellbeing score into the supported 0..5 range."""
+        return max(0, min(5, int(value)))
+
+    @staticmethod
+    def _record_collection(state: dict[str, Any], key: str) -> list[dict[str, Any]]:
+        """Return a typed record collection from state."""
+        collection = state["records"].setdefault(key, [])
+        return collection
+
+    @staticmethod
+    def _require_record(
+        collection: list[dict[str, Any]],
+        record_id: str,
+        label: str,
+    ) -> dict[str, Any]:
+        """Find a persisted record by ID or raise a domain error."""
+        for item in collection:
+            if item.get("id") == record_id:
+                return item
+        raise DataStoreError(f"No se encontró {label}.")
+
+    @staticmethod
+    def _roadmap_priority(item: RoadmapItem, stage: JourneyStage) -> tuple[int, str, str]:
+        """Sort roadmap items according to the current journey stage."""
+        if stage == "post_transition":
+            priority = _POST_TRANSITION_PRIORITY.get(item.category, 5)
+        else:
+            priority = 0
+        target = item.target_date or "9999-12-31"
+        return (priority, target, item.title.lower())
+
+    @staticmethod
+    def _build_roadmap_item(raw: dict[str, Any]) -> RoadmapItem:
+        """Convert raw roadmap payload into a typed domain object."""
+        return RoadmapItem(
+            id=str(raw.get("id", "")),
+            category=str(raw.get("category", "bienestar")),
+            title=str(raw.get("title", "")).strip(),
+            details=AppService._normalize_optional_text(raw.get("details")),
+            target_date=AppService._normalize_optional_text(raw.get("target_date")),
+            is_active=bool(raw.get("is_active", True)),
+            is_hidden=bool(raw.get("is_hidden", False)),
+            completed=bool(raw.get("completed", False)),
+            source=str(raw.get("source", "custom")),
+            created_at=str(raw.get("created_at", "")),
+            updated_at=str(raw.get("updated_at", "")),
+            completed_at=AppService._normalize_optional_text(raw.get("completed_at")),
+        )
+
+    @staticmethod
+    def _build_appointment_prep(raw: dict[str, Any]) -> AppointmentPrepRecord:
+        """Convert raw appointment payload into a typed domain object."""
+        appointment_type = str(raw.get("appointment_type", "general"))
+        if appointment_type not in {"medical", "psychology", "general"}:
+            appointment_type = "general"
+        return AppointmentPrepRecord(
+            id=str(raw.get("id", "")),
+            target_date=str(raw.get("target_date", "")),
+            appointment_type=appointment_type,  # type: ignore[arg-type]
+            title=str(raw.get("title", "")).strip(),
+            questions=AppService._normalize_optional_text(raw.get("questions")),
+            talking_points=AppService._normalize_optional_text(raw.get("talking_points")),
+            follow_up_step=AppService._normalize_optional_text(raw.get("follow_up_step")),
+            outcome_notes=AppService._normalize_optional_text(raw.get("outcome_notes")),
+            is_completed=bool(raw.get("is_completed", False)),
+            created_at=str(raw.get("created_at", "")),
+            updated_at=str(raw.get("updated_at", "")),
+            completed_at=AppService._normalize_optional_text(raw.get("completed_at")),
+        )
+
+    @staticmethod
+    def _build_wellbeing_log(raw: dict[str, Any]) -> WellbeingLog:
+        """Convert raw wellbeing payload into a typed domain object."""
+        return WellbeingLog(
+            id=str(raw.get("id", "")),
+            target_date=str(raw.get("target_date", "")),
+            mood=AppService._clamp_wellbeing_score(int(raw.get("mood", 0))),
+            energy=AppService._clamp_wellbeing_score(int(raw.get("energy", 0))),
+            sleep=AppService._clamp_wellbeing_score(int(raw.get("sleep", 0))),
+            side_effects=AppService._normalize_optional_text(raw.get("side_effects")),
+            notes=AppService._normalize_optional_text(raw.get("notes")),
+            linked_source=AppService._normalize_optional_text(raw.get("linked_source")),
+            created_at=str(raw.get("created_at", "")),
+            updated_at=str(raw.get("updated_at", "")),
+        )
+
+    @staticmethod
+    def _build_milestone(raw: dict[str, Any]) -> Milestone:
+        """Convert raw milestone payload into a typed domain object."""
+        return Milestone(
+            id=str(raw.get("id", "")),
+            target_date=str(raw.get("target_date", "")),
+            title=str(raw.get("title", "")).strip(),
+            details=AppService._normalize_optional_text(raw.get("details")),
+            source=str(raw.get("source", "manual")),
+            created_at=str(raw.get("created_at", "")),
+            updated_at=str(raw.get("updated_at", "")),
+        )
+
     def _update_health_fields(
         self,
         state: dict[str, Any],
@@ -205,6 +323,268 @@ class AppService:
     def get_health_config(self) -> dict[str, Any]:
         """Get current health config dictionary."""
         return self.repository.load()["health_config"]
+
+    def update_journey_stage(self, stage: Literal["transitioning", "post_transition"]) -> None:
+        """Update the current journey stage shown by the companion."""
+        state = self.repository.load()
+        state["profile"]["journey_stage"] = self._coerce_journey_stage(stage)
+        state["profile"]["updated_at"] = utc_now_iso()
+        self.repository.save(state)
+
+    def list_roadmap_items(self) -> list[RoadmapItem]:
+        """Return editable roadmap items sorted for the current journey stage."""
+        state = self.repository.load()
+        stage = self._coerce_journey_stage(state["profile"].get("journey_stage"))
+        items = [
+            self._build_roadmap_item(item)
+            for item in self._record_collection(state, "roadmap_items")
+        ]
+        return sorted(items, key=lambda item: self._roadmap_priority(item, stage))
+
+    def save_roadmap_item(
+        self,
+        item_id: str | None,
+        category: str,
+        title: str,
+        details: str | None,
+        target_date: str | None,
+        is_active: bool,
+        is_hidden: bool,
+    ) -> None:
+        """Create or update a roadmap item."""
+        normalized_title = title.strip()
+        if not normalized_title:
+            raise DataStoreError("El paso de la hoja de ruta necesita un título.")
+
+        state = self.repository.load()
+        records = self._record_collection(state, "roadmap_items")
+        now = utc_now_iso()
+        normalized_target = target_date if _parse_iso_date(target_date) else None
+
+        if item_id is None:
+            records.append(
+                {
+                    "id": uuid4().hex,
+                    "category": category.strip() or "bienestar",
+                    "title": normalized_title,
+                    "details": self._normalize_optional_text(details),
+                    "target_date": normalized_target,
+                    "is_active": bool(is_active),
+                    "is_hidden": bool(is_hidden),
+                    "completed": False,
+                    "source": "custom",
+                    "created_at": now,
+                    "updated_at": now,
+                    "completed_at": None,
+                }
+            )
+        else:
+            existing = self._require_record(records, item_id, "el paso de la hoja de ruta")
+            existing.update(
+                {
+                    "category": category.strip() or "bienestar",
+                    "title": normalized_title,
+                    "details": self._normalize_optional_text(details),
+                    "target_date": normalized_target,
+                    "is_active": bool(is_active),
+                    "is_hidden": bool(is_hidden),
+                    "updated_at": now,
+                }
+            )
+        self.repository.save(state)
+
+    def toggle_roadmap_item_completed(self, item_id: str, completed: bool) -> None:
+        """Mark a roadmap item as completed or reopen it."""
+        state = self.repository.load()
+        records = self._record_collection(state, "roadmap_items")
+        item = self._require_record(records, item_id, "el paso de la hoja de ruta")
+        now = utc_now_iso()
+        item["completed"] = bool(completed)
+        item["completed_at"] = now if completed else None
+        item["updated_at"] = now
+        self.repository.save(state)
+
+    def list_appointment_preps(self) -> list[AppointmentPrepRecord]:
+        """List appointment preparation records sorted by target date."""
+        state = self.repository.load()
+        records = [
+            self._build_appointment_prep(item)
+            for item in self._record_collection(state, "appointment_preps")
+        ]
+        return sorted(records, key=lambda item: (item.target_date, item.title.lower()))
+
+    def save_appointment_prep(
+        self,
+        prep_id: str | None,
+        target_date: str,
+        appointment_type: AppointmentType,
+        title: str,
+        questions: str | None,
+        talking_points: str | None,
+        follow_up_step: str | None,
+    ) -> None:
+        """Create or update an appointment preparation record."""
+        if _parse_iso_date(target_date) is None:
+            raise DataStoreError("La cita necesita una fecha válida.")
+        normalized_title = title.strip()
+        if not normalized_title:
+            raise DataStoreError("La cita necesita un título.")
+        if appointment_type not in {"medical", "psychology", "general"}:
+            raise DataStoreError("Tipo de cita no válido.")
+
+        state = self.repository.load()
+        records = self._record_collection(state, "appointment_preps")
+        now = utc_now_iso()
+        payload = {
+            "target_date": target_date,
+            "appointment_type": appointment_type,
+            "title": normalized_title,
+            "questions": self._normalize_optional_text(questions),
+            "talking_points": self._normalize_optional_text(talking_points),
+            "follow_up_step": self._normalize_optional_text(follow_up_step),
+            "updated_at": now,
+        }
+
+        if prep_id is None:
+            records.append(
+                {
+                    "id": uuid4().hex,
+                    **payload,
+                    "outcome_notes": None,
+                    "is_completed": False,
+                    "created_at": now,
+                    "completed_at": None,
+                }
+            )
+        else:
+            existing = self._require_record(records, prep_id, "la preparación de cita")
+            existing.update(payload)
+        self.repository.save(state)
+
+    def complete_appointment_prep(
+        self,
+        prep_id: str,
+        outcome_notes: str | None,
+        follow_up_step: str | None,
+    ) -> None:
+        """Mark an appointment preparation as completed and save outcome notes."""
+        state = self.repository.load()
+        records = self._record_collection(state, "appointment_preps")
+        existing = self._require_record(records, prep_id, "la preparación de cita")
+        now = utc_now_iso()
+        existing.update(
+            {
+                "outcome_notes": self._normalize_optional_text(outcome_notes),
+                "follow_up_step": self._normalize_optional_text(follow_up_step),
+                "is_completed": True,
+                "completed_at": now,
+                "updated_at": now,
+            }
+        )
+        self.repository.save(state)
+
+    def list_wellbeing_logs(
+        self,
+        date_from: date | None = None,
+        date_to: date | None = None,
+    ) -> list[WellbeingLog]:
+        """List wellbeing logs filtered by optional date range."""
+        state = self.repository.load()
+        records = [
+            self._build_wellbeing_log(item)
+            for item in self._record_collection(state, "wellbeing_logs")
+        ]
+
+        def _in_range(item: WellbeingLog) -> bool:
+            parsed = _parse_iso_date(item.target_date)
+            if parsed is None:
+                return False
+            if date_from is not None and parsed < date_from:
+                return False
+            if date_to is not None and parsed > date_to:
+                return False
+            return True
+
+        filtered = (
+            [item for item in records if _in_range(item)] if (date_from or date_to) else records
+        )
+        return sorted(filtered, key=lambda item: item.target_date, reverse=True)
+
+    def save_wellbeing_log(
+        self,
+        log_id: str | None,
+        target_date: str,
+        mood: int,
+        energy: int,
+        sleep: int,
+        side_effects: str | None,
+        notes: str | None,
+        linked_source: str | None,
+    ) -> None:
+        """Create or update a simple daily wellbeing check-in."""
+        if _parse_iso_date(target_date) is None:
+            raise DataStoreError("El bienestar necesita una fecha válida.")
+
+        state = self.repository.load()
+        records = self._record_collection(state, "wellbeing_logs")
+        now = utc_now_iso()
+        payload = {
+            "target_date": target_date,
+            "mood": self._clamp_wellbeing_score(mood),
+            "energy": self._clamp_wellbeing_score(energy),
+            "sleep": self._clamp_wellbeing_score(sleep),
+            "side_effects": self._normalize_optional_text(side_effects),
+            "notes": self._normalize_optional_text(notes),
+            "linked_source": self._normalize_optional_text(linked_source),
+            "updated_at": now,
+        }
+
+        if log_id is None:
+            records.append({"id": uuid4().hex, **payload, "created_at": now})
+        else:
+            existing = self._require_record(records, log_id, "el check-in de bienestar")
+            existing.update(payload)
+        self.repository.save(state)
+
+    def list_milestones(self) -> list[Milestone]:
+        """List milestones sorted by date."""
+        state = self.repository.load()
+        milestones = [
+            self._build_milestone(item) for item in self._record_collection(state, "milestones")
+        ]
+        return sorted(milestones, key=lambda item: (item.target_date, item.title.lower()))
+
+    def save_milestone(
+        self,
+        milestone_id: str | None,
+        target_date: str,
+        title: str,
+        details: str | None,
+        source: str = "manual",
+    ) -> None:
+        """Create or update a personal milestone."""
+        if _parse_iso_date(target_date) is None:
+            raise DataStoreError("El hito necesita una fecha válida.")
+        normalized_title = title.strip()
+        if not normalized_title:
+            raise DataStoreError("El hito necesita un título.")
+
+        state = self.repository.load()
+        records = self._record_collection(state, "milestones")
+        now = utc_now_iso()
+        payload = {
+            "target_date": target_date,
+            "title": normalized_title,
+            "details": self._normalize_optional_text(details),
+            "source": source.strip() or "manual",
+            "updated_at": now,
+        }
+        if milestone_id is None:
+            records.append({"id": uuid4().hex, **payload, "created_at": now})
+        else:
+            existing = self._require_record(records, milestone_id, "el hito")
+            existing.update(payload)
+        self.repository.save(state)
 
     def get_contacts(self) -> dict[str, Any]:
         """Get contacts by national and regional groups (loads from src/data/contacts)."""
@@ -268,10 +648,10 @@ class AppService:
     ) -> list[dict[str, Any]]:
         """Sort records by date and optional secondary key."""
         if secondary_key is None:
-            return sorted(rows, key=lambda row: row.get(date_key, ""))
+            return sorted(rows, key=lambda row: row.get(date_key) or "")
         return sorted(
             rows,
-            key=lambda row: (row.get(date_key, ""), row.get(secondary_key, "")),
+            key=lambda row: (row.get(date_key) or "", row.get(secondary_key) or ""),
         )
 
     @staticmethod
@@ -300,12 +680,17 @@ class AppService:
         visits = self._sort_rows(records["visits"], date_key="date")
         events = self._sort_rows(records["other_events"], date_key="date")
         habits = self._sort_rows(records["habits"], date_key="date")
+        roadmap_items = self._sort_rows(records["roadmap_items"], date_key="target_date")
+        appointment_preps = self._sort_rows(records["appointment_preps"], date_key="target_date")
+        wellbeing_logs = self._sort_rows(records["wellbeing_logs"], date_key="target_date")
+        milestones = self._sort_rows(records["milestones"], date_key="target_date")
 
         voice_by_date = self._group_rows_by_date(voice, "target_date")
         medication_by_date = self._group_rows_by_date(medication, "date")
         visits_by_date = self._group_rows_by_date(visits, "date")
         events_by_date = self._group_rows_by_date(events, "date")
         habits_by_date = self._group_rows_by_date(habits, "date")
+        wellbeing_by_date = self._group_rows_by_date(wellbeing_logs, "target_date")
 
         all_dates = sorted(
             key
@@ -315,6 +700,7 @@ class AppService:
                 *visits_by_date.keys(),
                 *events_by_date.keys(),
                 *habits_by_date.keys(),
+                *wellbeing_by_date.keys(),
             }
             if _parse_iso_date(key) is not None
         )
@@ -325,11 +711,16 @@ class AppService:
             "visits": visits,
             "events": events,
             "habits": habits,
+            "roadmap_items": roadmap_items,
+            "appointment_preps": appointment_preps,
+            "wellbeing_logs": wellbeing_logs,
+            "milestones": milestones,
             "voice_by_date": voice_by_date,
             "medication_by_date": medication_by_date,
             "visits_by_date": visits_by_date,
             "events_by_date": events_by_date,
             "habits_by_date": habits_by_date,
+            "wellbeing_by_date": wellbeing_by_date,
             "all_dates": all_dates,
         }
 
@@ -496,7 +887,57 @@ class AppService:
                 state["health_config"]["next_medical_visit_date"] = record["next_visit_date"]
             else:
                 state["health_config"]["next_psych_visit_date"] = record["next_visit_date"]
+            if record["next_visit_date"] is not None:
+                self._ensure_follow_up_appointment_prep(
+                    state=state,
+                    visit_type=visit_type,
+                    next_visit_date=record["next_visit_date"],
+                )
         self.repository.save(state)
+
+    def _ensure_follow_up_appointment_prep(
+        self,
+        state: dict[str, Any],
+        visit_type: str,
+        next_visit_date: str,
+    ) -> None:
+        """Create a follow-up preparation draft when a next visit is scheduled."""
+        records = self._record_collection(state, "appointment_preps")
+        existing = next(
+            (
+                item
+                for item in records
+                if item.get("target_date") == next_visit_date
+                and item.get("appointment_type") == visit_type
+                and not item.get("is_completed", False)
+            ),
+            None,
+        )
+        if existing is not None:
+            return
+
+        title = (
+            "Próxima revisión médica"
+            if visit_type == "medical"
+            else "Próxima sesión de seguimiento"
+        )
+        now = utc_now_iso()
+        records.append(
+            {
+                "id": uuid4().hex,
+                "target_date": next_visit_date,
+                "appointment_type": visit_type,
+                "title": title,
+                "questions": None,
+                "talking_points": None,
+                "follow_up_step": None,
+                "outcome_notes": None,
+                "is_completed": False,
+                "created_at": now,
+                "updated_at": now,
+                "completed_at": None,
+            }
+        )
 
     def list_visit_records(self) -> list[dict[str, Any]]:
         """Return visit records sorted by date."""
@@ -632,6 +1073,117 @@ class AppService:
         snapshot = self._build_state_snapshot(state)
         return list(snapshot["habits"])
 
+    def get_dashboard_snapshot(self, today: date | None = None) -> DashboardSnapshot:
+        """Build an action-oriented dashboard snapshot for the companion."""
+        today = today or date.today()
+        state = self.repository.load()
+        stage = self._coerce_journey_stage(state["profile"].get("journey_stage"))
+        alerts = self.get_due_alerts(today=today)
+
+        roadmap_items = [
+            self._build_roadmap_item(item)
+            for item in self._record_collection(state, "roadmap_items")
+        ]
+        visible_open_items = [
+            item
+            for item in roadmap_items
+            if item.is_active and not item.is_hidden and not item.completed
+        ]
+        visible_open_items.sort(key=lambda item: self._roadmap_priority(item, stage))
+
+        overdue_roadmap_items = [
+            item
+            for item in visible_open_items
+            if item.target_date is not None and (_parse_iso_date(item.target_date) or today) < today
+        ]
+
+        completed_recent = [
+            item
+            for item in roadmap_items
+            if item.completed
+            and item.completed_at
+            and (_parse_iso_date(item.target_date) or today) >= (today - timedelta(days=7))
+        ]
+        completed_recent.sort(key=lambda item: item.updated_at, reverse=True)
+
+        appointments = [
+            self._build_appointment_prep(item)
+            for item in self._record_collection(state, "appointment_preps")
+        ]
+        upcoming_appointments = [
+            item
+            for item in appointments
+            if not item.is_completed and (_parse_iso_date(item.target_date) or today) >= today
+        ]
+        upcoming_appointments.sort(key=lambda item: (item.target_date, item.title.lower()))
+
+        week_start = today - timedelta(days=6)
+        wellbeing_logs = self.list_wellbeing_logs(date_from=week_start, date_to=today)
+        snapshot = self._build_state_snapshot(state)
+        weekly_voice_samples = len(
+            [
+                row
+                for row in snapshot["voice"]
+                if (parsed := _parse_iso_date(row.get("target_date"))) is not None
+                and week_start <= parsed <= today
+            ]
+        )
+        weekly_completed_steps = len(
+            [
+                item
+                for item in roadmap_items
+                if item.completed
+                and item.completed_at is not None
+                and week_start
+                <= datetime.strptime(item.completed_at[:10], ISO_DATE).date()
+                <= today
+            ]
+        )
+
+        recommended_action = self._recommend_dashboard_action(
+            stage=stage,
+            alerts=alerts,
+            overdue_roadmap_items=overdue_roadmap_items,
+            upcoming_appointments=upcoming_appointments,
+            open_roadmap_items=visible_open_items,
+        )
+
+        return DashboardSnapshot(
+            pending_alerts=alerts,
+            overdue_roadmap_items=overdue_roadmap_items,
+            upcoming_appointments=upcoming_appointments[:3],
+            open_roadmap_items=visible_open_items[:5],
+            completed_recent_roadmap_items=completed_recent[:3],
+            weekly_completed_steps=weekly_completed_steps,
+            weekly_wellbeing_logs=len(wellbeing_logs),
+            weekly_voice_samples=weekly_voice_samples,
+            recommended_action=recommended_action,
+            journey_stage=stage,
+        )
+
+    def _recommend_dashboard_action(
+        self,
+        stage: JourneyStage,
+        alerts: list[str],
+        overdue_roadmap_items: list[RoadmapItem],
+        upcoming_appointments: list[AppointmentPrepRecord],
+        open_roadmap_items: list[RoadmapItem],
+    ) -> str:
+        """Suggest the next best action for the user."""
+        if alerts:
+            return alerts[0]
+        if upcoming_appointments:
+            return f"Preparar la cita: {upcoming_appointments[0].title}"
+        if overdue_roadmap_items:
+            return f"Retoma este paso pendiente: {overdue_roadmap_items[0].title}"
+        if stage == "post_transition":
+            for item in open_roadmap_items:
+                if item.category in {"salud", "bienestar"}:
+                    return f"Prioriza tu revisión: {item.title}"
+        if open_roadmap_items:
+            return f"Siguiente paso sugerido: {open_roadmap_items[0].title}"
+        return "Hoy no hay pendientes importantes. Puedes registrar cómo te encuentras."
+
     def get_due_alerts(self, today: date | None = None) -> list[str]:
         """Build reminder messages for due/overdue items."""
         if today is None:
@@ -711,6 +1263,7 @@ class AppService:
         visits = list(snapshot["visits_by_date"].get(day_key, []))
         events = list(snapshot["events_by_date"].get(day_key, []))
         habits = list(snapshot["habits_by_date"].get(day_key, []))
+        wellbeing = list(snapshot["wellbeing_by_date"].get(day_key, []))
 
         mood_h = [float(v.get("mood_auto", {}).get("happy", 0.0)) for v in voice]
         mood_s = [float(v.get("mood_auto", {}).get("sad", 0.0)) for v in voice]
@@ -728,6 +1281,7 @@ class AppService:
             "visits": visits,
             "other_events": events,
             "habits": habits,
+            "wellbeing": wellbeing,
         }
 
     def get_daily_summary(self, target_date: date) -> dict[str, Any]:
@@ -812,6 +1366,18 @@ class AppService:
             snapshot["visits"] = [r for r in snapshot["visits"] if _in_range(r.get("date", ""))]
             snapshot["events"] = [r for r in snapshot["events"] if _in_range(r.get("date", ""))]
             snapshot["habits"] = [r for r in snapshot["habits"] if _in_range(r.get("date", ""))]
+            snapshot["appointment_preps"] = [
+                r for r in snapshot["appointment_preps"] if _in_range(r.get("target_date", ""))
+            ]
+            snapshot["wellbeing_logs"] = [
+                r for r in snapshot["wellbeing_logs"] if _in_range(r.get("target_date", ""))
+            ]
+            snapshot["milestones"] = [
+                r for r in snapshot["milestones"] if _in_range(r.get("target_date", ""))
+            ]
+            snapshot["roadmap_items"] = [
+                r for r in snapshot["roadmap_items"] if _in_range(r.get("target_date", ""))
+            ]
             snapshot["all_dates"] = [k for k in snapshot["all_dates"] if _in_range(k)]
 
         weekly_voice_rows = self._hydrate_voice_rows(voice_rows, include_sensitive=True)
@@ -836,6 +1402,10 @@ class AppService:
         visits = pd.DataFrame(snapshot["visits"])
         events = pd.DataFrame(snapshot["events"])
         habits = pd.DataFrame(snapshot["habits"])
+        roadmap = pd.DataFrame(snapshot["roadmap_items"])
+        appointment_preps = pd.DataFrame(snapshot["appointment_preps"])
+        wellbeing = pd.DataFrame(snapshot["wellbeing_logs"])
+        milestones = pd.DataFrame(snapshot["milestones"])
 
         daily_rows: list[dict[str, Any]] = []
         for key in snapshot["all_dates"]:
@@ -853,6 +1423,7 @@ class AppService:
                     "visit_entries": len(summary["visits"]),
                     "event_entries": len(summary["other_events"]),
                     "habit_entries": len(summary["habits"]),
+                    "wellbeing_entries": len(summary["wellbeing"]),
                 }
             )
         daily = pd.DataFrame(daily_rows)
@@ -864,4 +1435,8 @@ class AppService:
             "visitas": visits,
             "eventos": events,
             "habitos": habits,
+            "hoja_ruta": roadmap,
+            "citas_preparadas": appointment_preps,
+            "bienestar": wellbeing,
+            "hitos": milestones,
         }

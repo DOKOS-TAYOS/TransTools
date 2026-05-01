@@ -5,6 +5,7 @@ from __future__ import annotations
 from tkinter import Toplevel, ttk
 
 from config import UI_STYLE, __version__
+from config.theme import prepare_ttk_window
 from frontend.ui_dialogs.section_widgets import (
     create_collapsible_section,
     create_scrollable_content,
@@ -16,6 +17,7 @@ from i18n import t
 def show_app_info_dialog(parent) -> None:
     """Show app information dialog."""
     dlg = Toplevel(parent)
+    prepare_ttk_window(dlg)
     dlg.title(t("menu.app_info"))
     dlg.resizable(width=True, height=True)
     dlg.configure(background=UI_STYLE["bg"])

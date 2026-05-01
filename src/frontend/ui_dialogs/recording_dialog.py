@@ -11,6 +11,7 @@ from typing import Any, Protocol
 from audio import analyze_audio, record_audio
 from config import UI_STYLE, get_audio_dir
 from config.env import get_env_from_schema
+from config.theme import prepare_ttk_window
 from core.context import get_app_service
 from core.types import VoiceAnalysisResult
 from frontend.date_widgets import create_date_entry
@@ -96,6 +97,7 @@ def show_recording_dialog(parent, app_service=None) -> None:
         parent: Parent Tk window. X closes and returns to main menu.
     """
     dlg = Toplevel(parent)
+    prepare_ttk_window(dlg)
     dlg.title(t("menu.voice_record"))
     dlg.resizable(width=True, height=True)
     dlg.configure(background=UI_STYLE["bg"])

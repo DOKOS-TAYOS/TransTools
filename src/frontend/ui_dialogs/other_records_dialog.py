@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from datetime import date
-from tkinter import BooleanVar, StringVar, Text, Toplevel, messagebox, ttk
+from tkinter import BooleanVar, IntVar, StringVar, Text, Toplevel, messagebox, ttk
 
 from config import UI_STYLE
+from config.theme import prepare_ttk_window
 from core.context import get_app_service
 from frontend.date_widgets import create_date_entry
-from frontend.input_widgets import create_combobox, create_entry
+from frontend.input_widgets import create_combobox, create_entry, create_spinbox
 from frontend.text_widgets import configure_notes_widget
 from frontend.window_utils import place_window_centered
 from i18n import t
@@ -26,6 +27,7 @@ def show_other_records_dialog(parent, app_service=None) -> None:
     app_service = app_service or get_app_service()
 
     dlg = Toplevel(parent)
+    prepare_ttk_window(dlg)
     dlg.title(t("menu.other_records"))
     dlg.resizable(width=True, height=True)
     dlg.configure(background=UI_STYLE["bg"])
@@ -75,6 +77,12 @@ def _build_visit_tab(frame, app_service):
     visit_type_var = StringVar(value="medical")
     status_var = StringVar(value="")
     select_next_var = BooleanVar(value=False)
+    wellbeing_enabled_var = BooleanVar(value=False)
+    mood_var = IntVar(value=3)
+    energy_var = IntVar(value=3)
+    sleep_var = IntVar(value=3)
+    side_effects_var = StringVar(value="")
+    wellbeing_notes_var = StringVar(value="")
 
     ttk.Label(frame, text=t("other.visit_date")).grid(column=0, row=0, sticky="w", pady=4)
     date_entry = create_date_entry(frame, width=14)
@@ -113,8 +121,44 @@ def _build_visit_tab(frame, app_service):
     configure_notes_widget(notes)
     notes.grid(column=1, row=3, sticky="w", pady=4)
 
+    wellbeing_frame = ttk.LabelFrame(frame, text=t("companion.wellbeing_section"))
+    wellbeing_frame.grid(column=0, row=4, columnspan=2, sticky="ew", pady=(6, 4))
+    ttk.Checkbutton(
+        wellbeing_frame,
+        text=t("companion.save_wellbeing_with_visit"),
+        variable=wellbeing_enabled_var,
+    ).grid(column=0, row=0, columnspan=2, sticky="w", pady=3)
+    ttk.Label(wellbeing_frame, text=t("companion.wellbeing_mood")).grid(
+        column=0, row=1, sticky="w", pady=2
+    )
+    create_spinbox(wellbeing_frame, from_=0, to=5, width=6, textvariable=mood_var).grid(
+        column=1, row=1, sticky="w", pady=2
+    )
+    ttk.Label(wellbeing_frame, text=t("companion.wellbeing_energy")).grid(
+        column=0, row=2, sticky="w", pady=2
+    )
+    create_spinbox(wellbeing_frame, from_=0, to=5, width=6, textvariable=energy_var).grid(
+        column=1, row=2, sticky="w", pady=2
+    )
+    ttk.Label(wellbeing_frame, text=t("companion.wellbeing_sleep")).grid(
+        column=0, row=3, sticky="w", pady=2
+    )
+    create_spinbox(wellbeing_frame, from_=0, to=5, width=6, textvariable=sleep_var).grid(
+        column=1, row=3, sticky="w", pady=2
+    )
+    ttk.Label(wellbeing_frame, text=t("companion.wellbeing_side_effects")).grid(
+        column=0, row=4, sticky="w", pady=2
+    )
+    create_entry(wellbeing_frame, textvariable=side_effects_var, width=32).grid(
+        column=1, row=4, sticky="w", pady=2
+    )
+    ttk.Label(wellbeing_frame, text=t("other.notes")).grid(column=0, row=5, sticky="w", pady=2)
+    create_entry(wellbeing_frame, textvariable=wellbeing_notes_var, width=32).grid(
+        column=1, row=5, sticky="w", pady=2
+    )
+
     ttk.Label(frame, textvariable=status_var, wraplength=680).grid(
-        column=0, row=4, columnspan=2, sticky="w", pady=4
+        column=0, row=5, columnspan=2, sticky="w", pady=4
     )
 
     def _save_visit() -> None:
@@ -122,13 +166,25 @@ def _build_visit_tab(frame, app_service):
             next_date: str | None = (
                 next_entry.get_date().isoformat() if select_next_var.get() else None
             )
+            target_date = date_entry.get_date()
             app_service.add_visit_record(
-                target_date=date_entry.get_date(),
+                target_date=target_date,
                 visit_type=visit_type_var.get(),
                 completed=True,
                 next_visit_date=next_date,
                 notes=notes.get("1.0", "end").strip() or None,
             )
+            if wellbeing_enabled_var.get():
+                app_service.save_wellbeing_log(
+                    log_id=None,
+                    target_date=target_date.isoformat(),
+                    mood=mood_var.get(),
+                    energy=energy_var.get(),
+                    sleep=sleep_var.get(),
+                    side_effects=side_effects_var.get().strip() or None,
+                    notes=wellbeing_notes_var.get().strip() or None,
+                    linked_source="visit",
+                )
             status_var.set(t("other.saved_visit"))
         except ValueError:
             messagebox.showerror(t("error.generic"), t("other.invalid_date"))

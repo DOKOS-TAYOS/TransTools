@@ -36,10 +36,12 @@ def analyze_audio(
             sample_rate = 22050
 
         # Pitch (F0) via pyin
+        min_hz = float(librosa.note_to_hz("C2"))
+        max_hz = float(librosa.note_to_hz("C7"))
         f0, voiced_flag, voiced_probs = librosa.pyin(
             audio,
-            fmin=librosa.note_to_hz("C2"),  # ~65 Hz
-            fmax=librosa.note_to_hz("C7"),  # ~2093 Hz
+            fmin=min_hz,  # ~65 Hz
+            fmax=max_hz,  # ~2093 Hz
             sr=sample_rate,
         )
 

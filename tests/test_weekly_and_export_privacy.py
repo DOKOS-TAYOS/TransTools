@@ -52,3 +52,42 @@ def test_daily_export_has_no_daily_pitch_columns(app_service) -> None:
     assert "pitch_min_hz" not in cols
     assert "pitch_max_hz" not in cols
     assert "voice_samples" in cols
+
+
+def test_export_frames_include_companion_sheets(app_service) -> None:
+    """Export frames should include companion datasets without breaking privacy."""
+    app_service.complete_onboarding(first_name="Alex")
+    app_service.save_roadmap_item(
+        item_id=None,
+        category="salud",
+        title="Programar revisión",
+        details=None,
+        target_date="2026-03-20",
+        is_active=True,
+        is_hidden=False,
+    )
+    app_service.save_appointment_prep(
+        prep_id=None,
+        target_date="2026-03-22",
+        appointment_type="medical",
+        title="Control",
+        questions=None,
+        talking_points=None,
+        follow_up_step=None,
+    )
+    app_service.save_wellbeing_log(
+        log_id=None,
+        target_date="2026-03-06",
+        mood=4,
+        energy=3,
+        sleep=4,
+        side_effects=None,
+        notes="Bien.",
+        linked_source="manual",
+    )
+
+    frames = app_service.to_export_frames()
+
+    assert "hoja_ruta" in frames
+    assert "citas_preparadas" in frames
+    assert "bienestar" in frames

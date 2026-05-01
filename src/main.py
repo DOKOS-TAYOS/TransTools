@@ -4,6 +4,7 @@
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 # Add src to path (must be before other imports)
 src_dir = Path(__file__).parent
@@ -67,6 +68,13 @@ def _contacts_callback(menu, app_service) -> None:
     show_contacts_dialog(menu, app_service=app_service)
 
 
+def _companion_callback(menu: Any, app_service: Any) -> None:
+    """Open the companion dashboard dialog."""
+    from frontend.ui_dialogs.companion_dialog import show_companion_dialog
+
+    show_companion_dialog(menu, app_service=app_service)
+
+
 def _app_info_callback(menu, _app_service) -> None:
     """Open application information dialog."""
     from frontend.ui_dialogs.app_info_dialog import show_app_info_dialog
@@ -112,6 +120,41 @@ def _startup_callback(menu_window, app_service) -> None:
         )
 
 
+def _dashboard_summary_text(app_service: Any) -> str:
+    """Build compact menu summary text from the companion snapshot."""
+    snapshot = app_service.get_dashboard_snapshot()
+
+    lines = [snapshot.recommended_action]
+    if snapshot.pending_alerts:
+        lines.append(t("companion.menu_pending_count", count=str(len(snapshot.pending_alerts))))
+    if snapshot.upcoming_appointments:
+        next_appointment = snapshot.upcoming_appointments[0]
+        lines.append(
+            t(
+                "companion.menu_next_appointment",
+                date=next_appointment.target_date,
+                title=next_appointment.title,
+            )
+        )
+    if snapshot.open_roadmap_items:
+        lines.append(
+            t(
+                "companion.menu_open_step",
+                category=t(f"companion.category.{snapshot.open_roadmap_items[0].category}"),
+                title=snapshot.open_roadmap_items[0].title,
+            )
+        )
+    lines.append(
+        t(
+            "companion.menu_weekly_counts",
+            roadmap=str(snapshot.weekly_completed_steps),
+            wellbeing=str(snapshot.weekly_wellbeing_logs),
+            voice=str(snapshot.weekly_voice_samples),
+        )
+    )
+    return "\n".join(lines)
+
+
 def main() -> None:
     """Main entry point for TransTools application.
 
@@ -136,10 +179,12 @@ def main() -> None:
             medication_callback=lambda menu: _medication_callback(menu, app_service),
             other_records_callback=lambda menu: _other_records_callback(menu, app_service),
             habits_callback=lambda menu: _habits_callback(menu, app_service),
+            companion_callback=lambda menu: _companion_callback(menu, app_service),
             contacts_callback=lambda menu: _contacts_callback(menu, app_service),
             app_info_callback=lambda menu: _app_info_callback(menu, app_service),
             view_data_callback=lambda menu: _view_data_callback(menu, app_service),
             config_callback=lambda menu: _config_callback(menu, app_service),
+            dashboard_summary_provider=lambda: _dashboard_summary_text(app_service),
             startup_callback=lambda menu: _startup_callback(menu, app_service),
         )
         logger.info("TransTools closed")

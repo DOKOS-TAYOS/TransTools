@@ -6,6 +6,7 @@ from datetime import date
 from tkinter import BooleanVar, IntVar, StringVar, Toplevel, messagebox, ttk
 
 from config import UI_STYLE
+from config.theme import prepare_ttk_window
 from core.context import get_app_service
 from frontend.date_widgets import create_date_entry
 from frontend.input_widgets import create_entry, create_spinbox
@@ -30,6 +31,7 @@ def show_onboarding_dialog(parent, app_service=None) -> bool:
         return True
 
     dlg = Toplevel(parent)
+    prepare_ttk_window(dlg)
     dlg.title(t("onboarding.title"))
     dlg.resizable(width=True, height=True)
     dlg.configure(background=UI_STYLE["bg"])

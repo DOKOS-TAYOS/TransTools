@@ -3,6 +3,7 @@
 from tkinter import Tk, Toplevel
 
 VERTICAL_CENTER_BIAS = 18
+WINDOW_SCREEN_MARGIN = 40
 
 
 def _get_window_decoration_size(window: Tk | Toplevel) -> tuple[int, int]:
@@ -19,6 +20,21 @@ def _get_window_decoration_size(window: Tk | Toplevel) -> tuple[int, int]:
         return extra_width, extra_height
     except Exception:
         return 0, 0
+
+
+def fit_window_size_to_screen(
+    width: int,
+    height: int,
+    screen_width: int,
+    screen_height: int,
+    margin: int = WINDOW_SCREEN_MARGIN,
+) -> tuple[int, int]:
+    """Clamp a requested window size so it fits inside the current screen."""
+    available_width = max(200, int(screen_width) - int(margin))
+    available_height = max(200, int(screen_height) - int(margin))
+    fitted_width = max(200, min(int(width), available_width))
+    fitted_height = max(200, min(int(height), available_height))
+    return fitted_width, fitted_height
 
 
 def place_window_centered(
@@ -39,6 +55,7 @@ def place_window_centered(
     sh = window.winfo_vrootheight()
 
     if width is not None and height is not None:
+        width, height = fit_window_size_to_screen(width, height, sw, sh)
         window.geometry(f"{width}x{height}+0+0")
         window.update_idletasks()
         extra_w, extra_h = _get_window_decoration_size(window)

@@ -8,6 +8,7 @@ from textwrap import fill
 from tkinter import Toplevel, ttk
 
 from config import UI_STYLE
+from config.theme import prepare_ttk_window
 from core.context import get_app_service
 from frontend.window_utils import place_window_centered
 from i18n import t
@@ -31,6 +32,14 @@ def _normalize_web_url(value: str) -> str | None:
     return url
 
 
+def _contact_type_label(value: object) -> str:
+    """Map a stored contact type to a translated short label."""
+    contact_type = str(value).strip()
+    if not contact_type:
+        return ""
+    return t(f"contacts.type.{contact_type}")
+
+
 def show_contacts_dialog(parent, app_service=None) -> None:
     """Show support contacts grouped by national and region.
 
@@ -41,6 +50,7 @@ def show_contacts_dialog(parent, app_service=None) -> None:
     contacts = app_service.get_contacts()
 
     dlg = Toplevel(parent)
+    prepare_ttk_window(dlg)
     dlg.title(t("menu.info_contacts"))
     dlg.resizable(width=True, height=True)
     dlg.configure(background=UI_STYLE["bg"])
@@ -72,7 +82,7 @@ def _create_contact_tree(parent) -> ttk.Treeview:
         "Contacts.Treeview",
         rowheight=max(48, (UI_STYLE["font_size"] * 3) + 8),
     )
-    columns = ("org", "description", "phone", "email", "web")
+    columns = ("org", "type", "description", "phone", "email", "web")
     tree = ttk.Treeview(
         parent,
         columns=columns,
@@ -81,15 +91,17 @@ def _create_contact_tree(parent) -> ttk.Treeview:
         style="Contacts.Treeview",
     )
     tree.heading("org", text=t("contacts.org"))
+    tree.heading("type", text=t("contacts.type"))
     tree.heading("description", text=t("contacts.description"))
     tree.heading("phone", text=t("contacts.phone"))
     tree.heading("email", text=t("contacts.email"))
     tree.heading("web", text=t("contacts.web"))
-    tree.column("org", width=150)
-    tree.column("description", width=180)
+    tree.column("org", width=170)
+    tree.column("type", width=130)
+    tree.column("description", width=220)
     tree.column("phone", width=130)
-    tree.column("email", width=200)
-    tree.column("web", width=200)
+    tree.column("email", width=180)
+    tree.column("web", width=180)
     return tree
 
 
@@ -104,6 +116,7 @@ def _populate_contact_tree(tree: ttk.Treeview, rows: list[dict]) -> None:
             "end",
             values=(
                 row.get("organization", ""),
+                _contact_type_label(row.get("type", "")),
                 _wrap_description(str(row.get("description", ""))),
                 row.get("phone", ""),
                 row.get("email", ""),
@@ -123,9 +136,9 @@ def _fill_contact_tree(parent, rows: list[dict]) -> None:
         if not selected:
             return
         values = tree.item(selected, "values")
-        if not values or len(values) < 5:
+        if not values or len(values) < 6:
             return
-        url = _normalize_web_url(str(values[4]))
+        url = _normalize_web_url(str(values[5]))
         if url:
             webbrowser.open(url)
 
@@ -177,9 +190,9 @@ def _fill_regional_contacts(parent, regional: dict[str, list[dict]]) -> None:
         if not selected:
             return
         values = tree.item(selected, "values")
-        if not values or len(values) < 5:
+        if not values or len(values) < 6:
             return
-        url = _normalize_web_url(str(values[4]))
+        url = _normalize_web_url(str(values[5]))
         if url:
             webbrowser.open(url)
 

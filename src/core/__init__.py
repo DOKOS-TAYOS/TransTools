@@ -4,6 +4,18 @@ This package intentionally avoids eager imports to keep startup light and
 prevent importing heavy optional dependencies through transitive imports.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .context import get_app_service
+    from .exporters import export_to_csv, export_to_excel, export_to_pdf, export_to_png
+    from .privacy import VoicePrivacyService
+    from .repository import StateRepository
+    from .service import AppService
+    from .types import VoiceAnalysisResult
+
 __all__ = [
     "AppService",
     "StateRepository",
@@ -17,7 +29,7 @@ __all__ = [
 ]
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     """Lazily expose common symbols without eager submodule imports."""
     if name == "AppService":
         from .service import AppService

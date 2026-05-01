@@ -268,6 +268,72 @@ def _default_habit_catalog() -> list[dict[str, Any]]:
     )
 
 
+def _default_roadmap_items() -> list[dict[str, Any]]:
+    """Return the editable base roadmap used by the companion."""
+    now = utc_now_iso()
+    items = [
+        (
+            "roadmap_salud_base",
+            "salud",
+            "Definir seguimiento de salud",
+            "Anota revisiones, analíticas o temas médicos que quieras tener controlados.",
+        ),
+        (
+            "roadmap_voz_base",
+            "voz",
+            "Decidir objetivo de voz",
+            "Puedes usarlo para marcar práctica, seguimiento o descanso vocal.",
+        ),
+        (
+            "roadmap_documentacion_base",
+            "documentacion",
+            "Revisar documentación importante",
+            "Añade aquí cambios de nombre, tarjetas o trámites que quieras organizar.",
+        ),
+        (
+            "roadmap_entorno_social_base",
+            "entorno_social",
+            "Pensar próximos pasos sociales",
+            "Por ejemplo, conversaciones pendientes o apoyos que quieras activar.",
+        ),
+        (
+            "roadmap_imagen_expresion_base",
+            "imagen_expresion",
+            "Definir un pequeño objetivo de expresión",
+            "Úsalo para ropa, estilo, autocuidado o cualquier cambio que te ayude.",
+        ),
+        (
+            "roadmap_cirugias_recuperacion_base",
+            "cirugias_recuperacion",
+            "Preparar cuidados o consultas futuras",
+            "Solo si aplica para ti: cirugía, recuperación o seguimiento posterior.",
+        ),
+        (
+            "roadmap_bienestar_base",
+            "bienestar",
+            "Mantener una rutina mínima de bienestar",
+            "Puedes enfocarlo a sueño, energía, apoyo emocional o autocuidado.",
+        ),
+    ]
+    return [
+        {
+            "id": item_id,
+            "category": category,
+            "title": title,
+            "details": details,
+            "target_date": None,
+            "is_active": True,
+            "is_hidden": False,
+            "completed": False,
+            "source": "base",
+            "created_at": now,
+            "updated_at": now,
+            "completed_at": None,
+        }
+        for item_id, category, title, details in items
+    ]
+
+
 def _merge_habit_catalog(
     existing: list[dict[str, Any]], default: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
@@ -335,6 +401,7 @@ def default_profile_state() -> dict[str, Any]:
         "profile": {
             "first_name": "",
             "onboarding_completed": False,
+            "journey_stage": "transitioning",
             "created_at": None,
             "updated_at": None,
         },
@@ -362,6 +429,10 @@ def default_history_state() -> dict[str, Any]:
             "visits": [],
             "other_events": [],
             "habits": [],
+            "roadmap_items": _default_roadmap_items(),
+            "appointment_preps": [],
+            "wellbeing_logs": [],
+            "milestones": [],
         },
     }
 

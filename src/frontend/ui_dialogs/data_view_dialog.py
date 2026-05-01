@@ -17,6 +17,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
 from config import UI_STYLE
+from config.theme import prepare_ttk_window
 from core.context import get_app_service
 from core.exporters import export_to_csv, export_to_excel, export_to_pdf, export_to_png
 from frontend.date_widgets import DateEntryAdapter, create_date_entry, get_calendar_locale
@@ -36,6 +37,7 @@ def show_data_view_dialog(parent, app_service=None) -> None:
     """
     app_service = app_service or get_app_service()
     dlg = Toplevel(parent)
+    prepare_ttk_window(dlg)
     dlg.title(t("menu.view_data"))
     dlg.resizable(width=True, height=True)
     dlg.configure(background=UI_STYLE["bg"])
@@ -79,13 +81,19 @@ def show_data_view_dialog(parent, app_service=None) -> None:
     user_tab = ttk.Frame(notebook, padding=6)
     calendar_tab = ttk.Frame(notebook, padding=UI_STYLE["padding"])
     chart_tab = ttk.Frame(notebook, padding=UI_STYLE["padding"])
+    process_tab = ttk.Frame(notebook, padding=UI_STYLE["padding"])
+    wellbeing_tab = ttk.Frame(notebook, padding=UI_STYLE["padding"])
 
     notebook.add(user_tab, text=t("config.tab_user"))
     notebook.add(calendar_tab, text=t("data.tab_calendar"))
     notebook.add(chart_tab, text=t("data.tab_weekly"))
+    notebook.add(process_tab, text=t("companion.tab_process"))
+    notebook.add(wellbeing_tab, text=t("companion.tab_wellbeing"))
 
     _build_user_tab(user_tab, app_service)
     _build_calendar_tab(calendar_tab, app_service)
+    _build_process_tab(process_tab, app_service)
+    _build_wellbeing_summary_tab(wellbeing_tab, app_service)
 
     weekly = pd.DataFrame(app_service.get_weekly_voice_summary())
     fig = Figure(figsize=(8.4, 4.8), dpi=100)
@@ -382,15 +390,19 @@ def _build_calendar_tab(parent, app_service) -> None:
             except ValueError:
                 continue
             tag_name = "activity"
-            labels = [activity_label.get(kind, kind) for kind in sorted(kinds)]
+            labels = [activity_label.get(kind) or kind for kind in sorted(kinds)]
             cal.calevent_create(parsed, ", ".join(labels), tag_name)
             cal.tag_config(tag_name, background="#d8ecf8", foreground="#0f3a56")
 
         def _on_pick(_event=None) -> None:
-            _render_day(cal.selection_get())
+            selected_day = cal.selection_get()
+            if selected_day is not None:
+                _render_day(selected_day)
 
         cal.bind("<<CalendarSelected>>", _on_pick)
-        _render_day(cal.selection_get())
+        initial_day = cal.selection_get()
+        if initial_day is not None:
+            _render_day(initial_day)
     except Exception:
         # Fallback without tkcalendar month view.
         ttk.Label(left, text=t("data.calendar_fallback")).pack(anchor="w")
@@ -525,3 +537,126 @@ def _build_export_controls(parent, app_service) -> None:
         side="left",
         padx=(8, 0),
     )
+
+
+def _build_process_tab(parent: ttk.Frame, app_service: Any) -> None:
+    """Show roadmap and appointment progress in the data view."""
+    parent.columnconfigure(0, weight=1)
+    parent.columnconfigure(1, weight=1)
+    parent.rowconfigure(1, weight=1)
+
+    snapshot = app_service.get_dashboard_snapshot()
+    intro = ttk.Label(
+        parent,
+        text=t("companion.process_intro"),
+        wraplength=920,
+        justify="left",
+    )
+    intro.grid(column=0, row=0, columnspan=2, sticky="w", pady=(0, 8))
+
+    roadmap_tree = ttk.Treeview(
+        parent,
+        columns=("category", "title", "target", "completed"),
+        show="headings",
+        height=12,
+    )
+    roadmap_tree.heading("category", text=t("companion.roadmap_category"))
+    roadmap_tree.heading("title", text=t("companion.roadmap_title_col"))
+    roadmap_tree.heading("target", text=t("companion.roadmap_target"))
+    roadmap_tree.heading("completed", text=t("companion.roadmap_completed"))
+    roadmap_tree.grid(column=0, row=1, sticky="nsew", padx=(0, 8))
+
+    for item in app_service.list_roadmap_items():
+        roadmap_tree.insert(
+            "",
+            "end",
+            values=(
+                t(f"companion.category.{item.category}"),
+                item.title,
+                item.target_date or t("data.no_value"),
+                t("menu.yes") if item.completed else t("menu.no"),
+            ),
+        )
+
+    right_frame = ttk.Frame(parent)
+    right_frame.grid(column=1, row=1, sticky="nsew")
+    right_frame.columnconfigure(0, weight=1)
+    right_frame.rowconfigure(1, weight=1)
+
+    ttk.Label(
+        right_frame,
+        text=t(
+            "companion.process_summary",
+            stage=t(f"companion.stage.{snapshot.journey_stage}"),
+            roadmap=str(snapshot.weekly_completed_steps),
+            wellbeing=str(snapshot.weekly_wellbeing_logs),
+            voice=str(snapshot.weekly_voice_samples),
+        ),
+        wraplength=420,
+        justify="left",
+    ).grid(column=0, row=0, sticky="w", pady=(0, 8))
+
+    appointments_tree = ttk.Treeview(
+        right_frame,
+        columns=("date", "type", "title", "done"),
+        show="headings",
+        height=12,
+    )
+    appointments_tree.heading("date", text=t("data.date"))
+    appointments_tree.heading("type", text=t("other.visit_type"))
+    appointments_tree.heading("title", text=t("companion.appointment_title"))
+    appointments_tree.heading("done", text=t("companion.roadmap_completed"))
+    appointments_tree.grid(column=0, row=1, sticky="nsew")
+
+    for prep in app_service.list_appointment_preps():
+        appointments_tree.insert(
+            "",
+            "end",
+            values=(
+                prep.target_date,
+                t(f"companion.appointment_type.{prep.appointment_type}"),
+                prep.title,
+                t("menu.yes") if prep.is_completed else t("menu.no"),
+            ),
+        )
+
+
+def _build_wellbeing_summary_tab(parent: ttk.Frame, app_service: Any) -> None:
+    """Show recent wellbeing check-ins in the data view."""
+    parent.columnconfigure(0, weight=1)
+    parent.rowconfigure(1, weight=1)
+
+    ttk.Label(
+        parent,
+        text=t("companion.wellbeing_intro"),
+        wraplength=920,
+        justify="left",
+    ).grid(column=0, row=0, sticky="w", pady=(0, 8))
+
+    tree = ttk.Treeview(
+        parent,
+        columns=("date", "mood", "energy", "sleep", "source", "notes"),
+        show="headings",
+        height=16,
+    )
+    tree.heading("date", text=t("data.date"))
+    tree.heading("mood", text=t("companion.wellbeing_mood"))
+    tree.heading("energy", text=t("companion.wellbeing_energy"))
+    tree.heading("sleep", text=t("companion.wellbeing_sleep"))
+    tree.heading("source", text=t("companion.wellbeing_source"))
+    tree.heading("notes", text=t("other.notes"))
+    tree.grid(column=0, row=1, sticky="nsew")
+
+    for item in app_service.list_wellbeing_logs()[:30]:
+        tree.insert(
+            "",
+            "end",
+            values=(
+                item.target_date,
+                item.mood,
+                item.energy,
+                item.sleep,
+                t(f"companion.source.{item.linked_source or 'manual'}"),
+                item.notes or item.side_effects or t("data.no_value"),
+            ),
+        )

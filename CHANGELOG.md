@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Companion Phase 1:
+  - Main-menu quick summary panel with direct access to a new companion center.
+  - Companion center with dashboard, editable roadmap, appointment preparation, and wellbeing tabs.
+  - Typed companion domain models for roadmap items, appointment prep, wellbeing logs, milestones, and dashboard snapshots.
+  - Companion datasets in local storage and export frames: roadmap, appointments, wellbeing, and milestones.
+  - Automatic follow-up appointment preparation when a visit stores a next visit date.
 - New modular core services with split JSON storage:
   - `patient_profile.json` (output): static patient data (name, health config, appointments, habit catalog).
   - `patient_history.json` (output): historical records (voice, medication, visits, events, habits).
@@ -36,6 +42,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- UI density and oversized dialogs are now better balanced: default `.env` UI font/padding are more compact, shared ttk button/tab/table sizing was tightened, requested window sizes are clamped to the available screen, and the companion dashboard now gives long summaries full-width sections with responsive wrapping instead of squeezing them into narrow side-by-side blocks.
+- Contacts/resources dataset reviewed, expanded and normalized with current public sources: refreshed outdated emails and phones, updated Trànsit coverage and direct contact, clarified mixed entity/service entries such as Kattalingorri / Kattalingune and Gehitu, added new verified associations and public services across Spain, harmonized directory copy plus per-region contact ordering, added a visible `Tipo` column for faster scanning, and completed additional missing public contact data where official general details were available.
+- Main menu quick summary now starts collapsed as a real expandable section, with a centered auto-sized toggle, smaller toggle text, and no extra heading text, and shared ttk theming now keeps notebooks, tables, dropdowns, and grouped panels on dark non-white surfaces across the newer dialogs.
+- Medication and visit logs can now optionally save a same-day wellbeing check-in from their existing dialogs.
+- Unified data view now includes companion process and wellbeing summary tabs.
+- Repository defaults and migrations now initialize `journey_stage` plus companion collections for existing users without losing previous data.
 - Default data storage now uses a user-scoped directory on Windows and Linux instead of the project-local `output/`, with one-time migration from legacy files when needed.
 - Settings restart now relaunches the app through the resolved `src/main.py` path instead of depending on `sys.argv[0]`.
 - Medication startup reminders now stay compact by showing today's due warning plus one aggregated overdue summary.
