@@ -5,7 +5,23 @@ from __future__ import annotations
 import i18n
 from config.theme import ThemeSizing, ThemeSurfacePalette, build_surface_palette, build_theme_sizing
 from frontend.ui_main_menu import build_menu_sections, get_summary_toggle_label
-from frontend.window_utils import fit_window_size_to_screen
+from frontend.window_utils import expand_window_size_to_requested_layout, fit_window_size_to_screen
+
+
+class _FakeRequestedWindow:
+    """Simple stand-in for requested-size window calculations."""
+
+    def __init__(self, req_width: int, req_height: int) -> None:
+        self._req_width = req_width
+        self._req_height = req_height
+
+    def winfo_reqwidth(self) -> int:
+        """Return the requested width used by layout calculations."""
+        return self._req_width
+
+    def winfo_reqheight(self) -> int:
+        """Return the requested height used by layout calculations."""
+        return self._req_height
 
 
 def test_build_surface_palette_uses_non_white_surface_colors() -> None:
@@ -41,6 +57,13 @@ def test_fit_window_size_to_screen_clamps_oversized_dialogs() -> None:
         1240,
         760,
     )
+
+
+def test_expand_window_size_to_requested_layout_preserves_footer_space() -> None:
+    """Dynamic dialogs should never be smaller than the layout Tk actually requests."""
+    window = _FakeRequestedWindow(req_width=685, req_height=621)
+
+    assert expand_window_size_to_requested_layout(window, 760, 617) == (760, 621)
 
 
 def test_get_summary_toggle_label_closed_state_uses_expand_copy(
@@ -80,3 +103,4 @@ def test_build_menu_sections_groups_actions_by_priority() -> None:
         "menu.config",
         "menu.exit",
     )
+    assert tuple(section["columns"] for section in sections) == (2, 1, 2)

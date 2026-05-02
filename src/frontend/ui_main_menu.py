@@ -12,6 +12,7 @@ from PIL import Image, ImageTk
 
 from config import UI_STYLE, __version__
 from config.theme import get_surface_palette, prepare_ttk_window
+from frontend.ui_dialogs.section_widgets import create_scrollable_content
 from frontend.window_utils import place_window_centered
 from i18n import t
 
@@ -29,6 +30,7 @@ class MenuSectionSpec(TypedDict):
 
     title_key: str
     description_key: str
+    columns: int
     items: tuple[MenuActionSpec, ...]
 
 
@@ -43,8 +45,8 @@ def _load_menu_logo() -> ImageTk.PhotoImage | None:
     except Exception:
         return None
 
-    max_width = 360
-    max_height = 180
+    max_width = 280
+    max_height = 125
     image.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
     return ImageTk.PhotoImage(image)
 
@@ -61,6 +63,7 @@ def build_menu_sections() -> tuple[MenuSectionSpec, ...]:
         {
             "title_key": "menu.section_capture",
             "description_key": "menu.section_capture_desc",
+            "columns": 2,
             "items": (
                 {
                     "action_key": "voice_study",
@@ -87,6 +90,7 @@ def build_menu_sections() -> tuple[MenuSectionSpec, ...]:
         {
             "title_key": "menu.section_support",
             "description_key": "menu.section_support_desc",
+            "columns": 1,
             "items": (
                 {
                     "action_key": "companion",
@@ -113,6 +117,7 @@ def build_menu_sections() -> tuple[MenuSectionSpec, ...]:
         {
             "title_key": "menu.section_settings",
             "description_key": "menu.section_settings_desc",
+            "columns": 2,
             "items": (
                 {
                     "action_key": "config",
@@ -134,36 +139,35 @@ def _create_section_card(
     *,
     title: str,
     description: str,
+    columns: int,
     items: tuple[MenuActionSpec, ...],
     callbacks: dict[str, Callable[[], None]],
-    button_width: int,
 ) -> ttk.Frame:
     """Create a reusable card with a section heading and action buttons."""
-    card = ttk.Frame(parent, style="Card.TFrame", padding=18)
+    card = ttk.Frame(parent, style="Card.TFrame", padding=14)
     header = ttk.Label(card, text=title, style="CardTitle.TLabel")
     body = ttk.Label(
         card,
         text=description,
         style="CardMuted.TLabel",
         justify="left",
-        wraplength=360,
+        wraplength=420 if columns == 1 else 340,
     )
 
-    header.grid(column=0, row=0, columnspan=2, sticky="w")
-    body.grid(column=0, row=1, columnspan=2, sticky="ew", pady=(6, 14))
+    header.grid(column=0, row=0, columnspan=columns, sticky="w")
+    body.grid(column=0, row=1, columnspan=columns, sticky="ew", pady=(6, 12))
 
-    for column in (0, 1):
+    for column in range(columns):
         card.columnconfigure(column, weight=1)
 
     for index, item in enumerate(items):
-        row = (index // 2) + 2
-        column = index % 2
+        row = (index // columns) + 2
+        column = index % columns
         ttk.Button(
             card,
             text=t(item["label_key"]),
             command=callbacks[item["action_key"]],
             style=item["style"],
-            width=button_width,
         ).grid(column=column, row=row, padx=4, pady=4, sticky="ew")
 
     return card
@@ -189,14 +193,17 @@ def create_main_menu(
 
     menu.title(f"{t('menu.title')} - v{__version__}")
     menu.configure(background=UI_STYLE["bg"])
-    menu.resizable(width=False, height=False)
+    menu.resizable(width=False, height=True)
     menu.protocol("WM_DELETE_WINDOW", lambda: show_exit_confirmation(menu))
+    menu.columnconfigure(0, weight=1)
+    menu.rowconfigure(0, weight=1)
 
     pad = int(UI_STYLE["padding"])
-    main_frame = ttk.Frame(menu, style="App.TFrame", padding=max(12, pad * 2))
-    main_frame.grid(column=0, row=0, sticky="nsew")
-    main_frame.columnconfigure(0, weight=1)
-    main_frame.columnconfigure(1, weight=1)
+    scroll_container, _canvas, main_frame = create_scrollable_content(menu, UI_STYLE["bg"])
+    scroll_container.grid(column=0, row=0, sticky="nsew")
+    main_frame.configure(style="App.TFrame", padding=max(10, pad * 2))
+    main_frame.columnconfigure(0, weight=5)
+    main_frame.columnconfigure(1, weight=6)
 
     logo_image = _load_menu_logo()
     if logo_image is not None:
@@ -207,8 +214,8 @@ def create_main_menu(
         bg=palette.hero_bg,
         highlightthickness=1,
         highlightbackground=palette.panel_highlight,
-        padx=24,
-        pady=22,
+        padx=18,
+        pady=16,
     )
     hero_frame.grid(column=0, row=0, columnspan=2, sticky="ew", pady=(0, pad + 6))
     hero_frame.grid_columnconfigure(0, weight=1)
@@ -216,23 +223,24 @@ def create_main_menu(
     current_hero_row = 0
     if logo_image is not None:
         logo_label = tk.Label(hero_frame, image=logo_image, bg=palette.hero_bg, bd=0)
-        logo_label.grid(column=0, row=current_hero_row, sticky="n", pady=(0, 10))
+        logo_label.grid(column=0, row=current_hero_row, sticky="n", pady=(0, 8))
         current_hero_row += 1
 
-    ttk.Label(hero_frame, text=t("menu.title"), style="HeroTitle.TLabel").grid(
-        column=0,
-        row=current_hero_row,
-        sticky="n",
-    )
-    current_hero_row += 1
+    if logo_image is None:
+        ttk.Label(hero_frame, text=t("menu.title"), style="HeroTitle.TLabel").grid(
+            column=0,
+            row=current_hero_row,
+            sticky="n",
+        )
+        current_hero_row += 1
 
     ttk.Label(
         hero_frame,
         text=t("menu.welcome"),
         style="HeroSubtitle.TLabel",
         justify="center",
-        wraplength=760,
-    ).grid(column=0, row=current_hero_row, sticky="ew", pady=(8, 10))
+        wraplength=720,
+    ).grid(column=0, row=current_hero_row, sticky="ew", pady=(6, 8))
     current_hero_row += 1
 
     ttk.Label(hero_frame, text=f"v{__version__}", style="HeroMeta.TLabel").grid(
@@ -273,7 +281,6 @@ def create_main_menu(
             text=t("menu.companion"),
             command=callbacks["companion"],
             style="Accent.TButton",
-            width=max(16, int(UI_STYLE["button_width"])),
         ).grid(column=1, row=0, sticky="e", padx=(pad, 0))
 
         summary_text = ttk.Label(
@@ -315,7 +322,6 @@ def create_main_menu(
         _refresh_summary()
         _apply_summary_visibility()
 
-    btn_width = max(int(UI_STYLE["button_width"]), 18)
     sections = build_menu_sections()
     section_positions = (
         (0, 2, 1),
@@ -327,9 +333,9 @@ def create_main_menu(
             main_frame,
             title=t(section["title_key"]),
             description=t(section["description_key"]),
+            columns=section["columns"],
             items=section["items"],
             callbacks=callbacks,
-            button_width=btn_width,
         )
         section_card.grid(
             column=column,
@@ -342,7 +348,9 @@ def create_main_menu(
         if column == 1:
             section_card.grid_configure(padx=(pad // 2, 0))
 
-    place_window_centered(menu, width=1000, height=780)
+    ttk.Frame(main_frame, style="App.TFrame", height=6).grid(column=0, row=4, columnspan=2)
+    menu.minsize(900, 620)
+    place_window_centered(menu, width=980, height=760)
     return menu
 
 

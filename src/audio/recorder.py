@@ -1,7 +1,7 @@
 """Audio recording for TransTools."""
 
 from importlib import import_module
-from typing import Optional, Protocol
+from typing import Optional, Protocol, cast
 
 import numpy as np
 
@@ -30,12 +30,17 @@ class SupportsSoundDevice(Protocol):
 def _load_sounddevice() -> SupportsSoundDevice:
     """Load sounddevice lazily so non-recording flows do not require PortAudio."""
     try:
-        return import_module("sounddevice")
+        module = import_module("sounddevice")
     except (ImportError, OSError) as exc:
         logger.exception("Recording backend unavailable: %s", exc)
         raise RecordingError(
             "Recording backend unavailable: sounddevice/PortAudio is not installed or accessible."
         ) from exc
+
+    if not hasattr(module, "rec") or not hasattr(module, "wait"):
+        raise RecordingError("Recording backend unavailable: incomplete sounddevice module.")
+
+    return cast(SupportsSoundDevice, module)
 
 
 def record_audio(

@@ -253,7 +253,7 @@ def configure_ttk_styles(root: Misc) -> None:
 
     font = (str(UI_STYLE["font_family"]), int(UI_STYLE["font_size"]))
     font_small = (str(UI_STYLE["font_family"]), max(9, int(UI_STYLE["font_size"]) - 3))
-    title_font = (str(UI_STYLE["font_family"]), max(18, int(UI_STYLE["font_size"]) + 8), "bold")
+    title_font = (str(UI_STYLE["font_family"]), max(16, int(UI_STYLE["font_size"]) + 5), "bold")
     section_font = (str(UI_STYLE["font_family"]), max(12, int(UI_STYLE["font_size"]) + 1), "bold")
     bg = str(UI_STYLE["bg"])
     fg = str(UI_STYLE["fg"])
@@ -355,7 +355,7 @@ def configure_ttk_styles(root: Misc) -> None:
         hover_background=_blend_hex_colors(palette.panel_alt_bg, "#ffffff", 0.10),
         pressed_background=palette.panel_bg,
         font=font,
-        padding=(sizing.button_padding[0] + 4, sizing.button_padding[1] + 2),
+        padding=(sizing.button_padding[0] + 1, sizing.button_padding[1]),
     )
     _configure_button_style(
         style,

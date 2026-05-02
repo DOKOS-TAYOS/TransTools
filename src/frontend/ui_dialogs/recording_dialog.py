@@ -16,7 +16,7 @@ from core.context import get_app_service
 from core.types import VoiceAnalysisResult
 from frontend.date_widgets import create_date_entry
 from frontend.input_widgets import create_spinbox
-from frontend.window_utils import place_window_centered
+from frontend.window_utils import expand_window_size_to_requested_layout, place_window_centered
 from i18n import t
 from utils import AnalysisError, DataStoreError, RecordingError, get_logger
 
@@ -193,6 +193,7 @@ def show_recording_dialog(parent, app_service=None) -> None:
                 return
             w = max(280, frame.winfo_reqwidth() + pad * 4)
             h = max(120, frame.winfo_reqheight() + pad * 2)
+            w, h = expand_window_size_to_requested_layout(dlg, w, h)
             dlg.geometry(f"{w}x{h}")
 
         dlg.after_idle(_do)
@@ -349,5 +350,10 @@ def show_recording_dialog(parent, app_service=None) -> None:
     dlg.update_idletasks()
     target_width = max(400, ready_frame.winfo_reqwidth() + (pad * 4))
     target_height = max(320, ready_frame.winfo_reqheight() + (pad * 2))
+    target_width, target_height = expand_window_size_to_requested_layout(
+        dlg,
+        target_width,
+        target_height,
+    )
     dlg.minsize(target_width, target_height)
     place_window_centered(dlg, width=target_width, height=target_height)

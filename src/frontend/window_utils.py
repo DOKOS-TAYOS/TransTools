@@ -1,9 +1,24 @@
 """Window utilities for TransTools."""
 
+from __future__ import annotations
+
 from tkinter import Tk, Toplevel
+from typing import Protocol
 
 VERTICAL_CENTER_BIAS = 18
 WINDOW_SCREEN_MARGIN = 40
+
+
+class SupportsRequestedWindowSize(Protocol):
+    """Protocol for widgets exposing requested layout dimensions."""
+
+    def winfo_reqwidth(self) -> int:
+        """Return the requested width for the current layout."""
+        ...
+
+    def winfo_reqheight(self) -> int:
+        """Return the requested height for the current layout."""
+        ...
 
 
 def _get_window_decoration_size(window: Tk | Toplevel) -> tuple[int, int]:
@@ -35,6 +50,18 @@ def fit_window_size_to_screen(
     fitted_width = max(200, min(int(width), available_width))
     fitted_height = max(200, min(int(height), available_height))
     return fitted_width, fitted_height
+
+
+def expand_window_size_to_requested_layout(
+    window: SupportsRequestedWindowSize,
+    width: int,
+    height: int,
+) -> tuple[int, int]:
+    """Keep a target size at least as large as the widget tree really requests."""
+    return (
+        max(int(width), int(window.winfo_reqwidth())),
+        max(int(height), int(window.winfo_reqheight())),
+    )
 
 
 def place_window_centered(

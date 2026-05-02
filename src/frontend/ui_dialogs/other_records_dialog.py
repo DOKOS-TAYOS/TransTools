@@ -11,7 +11,7 @@ from core.context import get_app_service
 from frontend.date_widgets import create_date_entry
 from frontend.input_widgets import create_combobox, create_entry, create_spinbox
 from frontend.text_widgets import configure_notes_widget
-from frontend.window_utils import place_window_centered
+from frontend.window_utils import expand_window_size_to_requested_layout, place_window_centered
 from i18n import t
 from utils import DataStoreError, get_logger
 
@@ -68,6 +68,11 @@ def show_other_records_dialog(parent, app_service=None) -> None:
     notebook_req_height = notebook.winfo_reqheight()
     target_width = max(760, tab_req_width + (pad * 4), notebook_req_width + (pad * 2))
     target_height = max(360, notebook_req_height + button_frame.winfo_reqheight() + (pad * 4))
+    target_width, target_height = expand_window_size_to_requested_layout(
+        dlg,
+        target_width,
+        target_height,
+    )
     dlg.minsize(target_width, target_height)
     place_window_centered(dlg, width=target_width, height=target_height)
 

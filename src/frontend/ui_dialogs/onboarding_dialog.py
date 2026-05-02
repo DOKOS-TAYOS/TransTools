@@ -10,7 +10,7 @@ from config.theme import prepare_ttk_window
 from core.context import get_app_service
 from frontend.date_widgets import create_date_entry
 from frontend.input_widgets import create_entry, create_spinbox
-from frontend.window_utils import place_window_centered
+from frontend.window_utils import expand_window_size_to_requested_layout, place_window_centered
 from i18n import t
 from utils import DataStoreError, get_logger
 
@@ -323,6 +323,12 @@ def show_onboarding_dialog(parent, app_service=None) -> bool:
     welcome_body_label.configure(wraplength=text_wraplength)
     help_body_label.configure(wraplength=text_wraplength)
 
+    dlg.update_idletasks()
+    target_width, target_height = expand_window_size_to_requested_layout(
+        dlg,
+        target_width,
+        target_height,
+    )
     dlg.minsize(target_width, target_height)
     place_window_centered(dlg, width=target_width, height=target_height)
     parent.wait_window(dlg)
