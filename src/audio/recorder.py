@@ -1,9 +1,9 @@
 """Audio recording for TransTools."""
 
-from typing import Optional
+from importlib import import_module
+from typing import Optional, Protocol
 
 import numpy as np
-import sounddevice as sd
 
 from config.env import get_env_from_schema
 from utils import RecordingError, get_logger
@@ -11,6 +11,31 @@ from utils import RecordingError, get_logger
 logger = get_logger(__name__)
 
 DEFAULT_SAMPLE_RATE = 44100
+
+
+class SupportsSoundDevice(Protocol):
+    """Minimal protocol for the sounddevice API used by the recorder."""
+
+    def rec(
+        self,
+        frames: int,
+        samplerate: int,
+        channels: int,
+        dtype: str,
+    ) -> np.ndarray: ...
+
+    def wait(self) -> None: ...
+
+
+def _load_sounddevice() -> SupportsSoundDevice:
+    """Load sounddevice lazily so non-recording flows do not require PortAudio."""
+    try:
+        return import_module("sounddevice")
+    except (ImportError, OSError) as exc:
+        logger.exception("Recording backend unavailable: %s", exc)
+        raise RecordingError(
+            "Recording backend unavailable: sounddevice/PortAudio is not installed or accessible."
+        ) from exc
 
 
 def record_audio(
@@ -33,6 +58,7 @@ def record_audio(
         duration_sec = float(get_env_from_schema("RECORD_DURATION_SEC"))
 
     try:
+        sd = _load_sounddevice()
         logger.info("Recording for %.1f seconds...", duration_sec)
         recording = sd.rec(
             int(duration_sec * sample_rate),

@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Voice dialog imports no longer require `sounddevice`/PortAudio during module loading, so pytest collection works in environments where the recording backend is unavailable.
 - Tkinter UI now uses a more polished "dark premium" visual system: richer derived surfaces, stronger control hierarchy across buttons/tabs/tables/inputs, upgraded note and info panel styling, and a redesigned main menu landing page with a hero header, grouped action cards, and a more prominent quick-summary panel.
 - UI density and oversized dialogs are now better balanced: default `.env` UI font/padding are more compact, shared ttk button/tab/table sizing was tightened, requested window sizes are clamped to the available screen, and the companion dashboard now gives long summaries full-width sections with responsive wrapping instead of squeezing them into narrow side-by-side blocks.
 - Contacts/resources dataset reviewed, expanded and normalized with current public sources: refreshed outdated emails and phones, updated Trànsit coverage and direct contact, clarified mixed entity/service entries such as Kattalingorri / Kattalingune and Gehitu, added new verified associations and public services across Spain, harmonized directory copy plus per-region contact ordering, added a visible `Tipo` column for faster scanning, and completed additional missing public contact data where official general details were available.
