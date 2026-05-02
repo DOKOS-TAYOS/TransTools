@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import i18n
 from config.theme import ThemeSizing, ThemeSurfacePalette, build_surface_palette, build_theme_sizing
-from frontend.ui_main_menu import get_summary_toggle_label
+from frontend.ui_main_menu import build_menu_sections, get_summary_toggle_label
 from frontend.window_utils import fit_window_size_to_screen
 
 
@@ -14,7 +14,10 @@ def test_build_surface_palette_uses_non_white_surface_colors() -> None:
 
     assert isinstance(palette, ThemeSurfacePalette)
     assert palette.entry_bg == "#141414"
-    assert palette.panel_bg != "#ffffff"
+    assert palette.panel_bg == "#252525"
+    assert palette.panel_alt_bg == "#333333"
+    assert palette.hero_bg == "#20363f"
+    assert palette.muted_fg == "#999999"
     assert palette.tree_bg == palette.entry_bg
     assert palette.listbox_bg == palette.entry_bg
     assert palette.tree_selected_bg == "#1F1F1F"
@@ -56,3 +59,24 @@ def test_get_summary_toggle_label_open_state_uses_collapse_copy(
     monkeypatch.setattr(i18n, "_current_lang", "en")
 
     assert get_summary_toggle_label(is_expanded=True) == "Hide quick summary"
+
+
+def test_build_menu_sections_groups_actions_by_priority() -> None:
+    """The premium landing page should separate primary, support, and utility actions."""
+    sections = build_menu_sections()
+
+    assert tuple(section["title_key"] for section in sections) == (
+        "menu.section_capture",
+        "menu.section_support",
+        "menu.section_settings",
+    )
+    assert tuple(item["action_key"] for item in sections[0]["items"]) == (
+        "voice_study",
+        "medication",
+        "other_records",
+        "habits",
+    )
+    assert tuple(item["label_key"] for item in sections[2]["items"]) == (
+        "menu.config",
+        "menu.exit",
+    )

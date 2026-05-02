@@ -1,7 +1,7 @@
 """Configuration dialog for TransTools."""
 
 from pathlib import Path
-from tkinter import BooleanVar, Canvas, IntVar, StringVar, TclError, Toplevel, messagebox, ttk
+from tkinter import BooleanVar, Canvas, IntVar, StringVar, TclError, Tk, Toplevel, messagebox, ttk
 from typing import Any
 
 from config import UI_STYLE, get_current_env_values, write_env_file
@@ -46,7 +46,7 @@ def _bounded_int_value(var: IntVar, minimum: int, maximum: int, default: int) ->
         return str(default)
 
 
-def show_config_dialog(parent, app_service: Any | None = None) -> bool:
+def show_config_dialog(parent: Tk | Toplevel, app_service: Any | None = None) -> bool:
     """Show config dialog.
 
     Args:
@@ -322,12 +322,12 @@ def show_config_dialog(parent, app_service: Any | None = None) -> bool:
         )
         values["LOG_LEVEL"] = log_var.get().strip().upper() or "INFO"
 
-        values["UI_BACKGROUND"] = ui_bg_var.get().strip() or "#181818"
-        values["UI_FOREGROUND"] = ui_fg_var.get().strip() or "#CCCCCC"
-        values["UI_BUTTON_BG"] = ui_btn_bg_var.get().strip() or "#1F1F1F"
-        values["UI_BUTTON_FG"] = ui_btn_fg_var.get().strip() or "lime green"
-        values["UI_BUTTON_FG_CANCEL"] = ui_btn_cancel_var.get().strip() or "red2"
-        values["UI_BUTTON_FG_ACCENT2"] = ui_btn_accent_var.get().strip() or "yellow"
+        values["UI_BACKGROUND"] = ui_bg_var.get().strip() or "#10161B"
+        values["UI_FOREGROUND"] = ui_fg_var.get().strip() or "#F2F5F7"
+        values["UI_BUTTON_BG"] = ui_btn_bg_var.get().strip() or "#1E2D38"
+        values["UI_BUTTON_FG"] = ui_btn_fg_var.get().strip() or "#F5F7FA"
+        values["UI_BUTTON_FG_CANCEL"] = ui_btn_cancel_var.get().strip() or "#FFF1F2"
+        values["UI_BUTTON_FG_ACCENT2"] = ui_btn_accent_var.get().strip() or "#FFF4D6"
         values["UI_FONT_FAMILY"] = ui_font_family_var.get().strip() or "Bahnschrift"
         values["UI_FONT_SIZE"] = _bounded_int_value(
             ui_font_size_var,

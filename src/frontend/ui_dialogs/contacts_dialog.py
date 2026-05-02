@@ -5,11 +5,13 @@ from __future__ import annotations
 import tkinter as tk
 import webbrowser
 from textwrap import fill
-from tkinter import Toplevel, ttk
+from tkinter import Tk, Toplevel, ttk
+from typing import Any
 
 from config import UI_STYLE
-from config.theme import prepare_ttk_window
+from config.theme import get_surface_palette, prepare_ttk_window
 from core.context import get_app_service
+from core.service import AppService
 from frontend.window_utils import place_window_centered
 from i18n import t
 
@@ -40,14 +42,14 @@ def _contact_type_label(value: object) -> str:
     return t(f"contacts.type.{contact_type}")
 
 
-def show_contacts_dialog(parent, app_service=None) -> None:
+def show_contacts_dialog(parent: Tk | Toplevel, app_service: AppService | None = None) -> None:
     """Show support contacts grouped by national and region.
 
     Args:
         parent: Parent Tk window.
     """
-    app_service = app_service or get_app_service()
-    contacts = app_service.get_contacts()
+    resolved_app_service = app_service if app_service is not None else get_app_service()
+    contacts = resolved_app_service.get_contacts()
 
     dlg = Toplevel(parent)
     prepare_ttk_window(dlg)
@@ -69,13 +71,13 @@ def show_contacts_dialog(parent, app_service=None) -> None:
     )
     _fill_regional_contacts(regional_tab, contacts.get("regional", {}))
 
-    ttk.Button(dlg, text=t("menu.close"), command=dlg.destroy).pack(pady=8)
+    ttk.Button(dlg, text=t("menu.close"), command=dlg.destroy, style="Utility.TButton").pack(pady=8)
     dlg.transient(parent)
     dlg.minsize(1120, 520)
     place_window_centered(dlg, width=1280, height=680)
 
 
-def _create_contact_tree(parent) -> ttk.Treeview:
+def _create_contact_tree(parent: Any) -> ttk.Treeview:
     """Create a contact table widget."""
     style = ttk.Style(parent)
     style.configure(
@@ -105,7 +107,7 @@ def _create_contact_tree(parent) -> ttk.Treeview:
     return tree
 
 
-def _populate_contact_tree(tree: ttk.Treeview, rows: list[dict]) -> None:
+def _populate_contact_tree(tree: ttk.Treeview, rows: list[dict[str, str]]) -> None:
     """Replace contact table rows."""
     for item in tree.get_children():
         tree.delete(item)
@@ -125,7 +127,7 @@ def _populate_contact_tree(tree: ttk.Treeview, rows: list[dict]) -> None:
         )
 
 
-def _fill_contact_tree(parent, rows: list[dict]) -> None:
+def _fill_contact_tree(parent: Any, rows: list[dict[str, str]]) -> None:
     """Render contact table in a frame."""
     tree = _create_contact_tree(parent)
     _populate_contact_tree(tree, rows)
@@ -149,7 +151,7 @@ def _fill_contact_tree(parent, rows: list[dict]) -> None:
     yscroll.pack(side="right", fill="y")
 
 
-def _fill_regional_contacts(parent, regional: dict[str, list[dict]]) -> None:
+def _fill_regional_contacts(parent: Any, regional: dict[str, list[dict[str, str]]]) -> None:
     """Render regional contacts with selector on the left and table on the right."""
     if not regional:
         frame = ttk.Frame(parent, padding=UI_STYLE["padding"])
@@ -158,6 +160,7 @@ def _fill_regional_contacts(parent, regional: dict[str, list[dict]]) -> None:
         return
 
     regions = sorted(regional.items(), key=lambda item: item[0].lower())
+    palette = get_surface_palette()
     container = ttk.Frame(parent)
     container.pack(fill="both", expand=True)
     selector_frame = ttk.Frame(container)
@@ -172,10 +175,11 @@ def _fill_regional_contacts(parent, regional: dict[str, list[dict]]) -> None:
         exportselection=False,
         width=24,
         height=18,
-        background=UI_STYLE["bg"],
+        background=palette.listbox_bg,
         foreground=UI_STYLE["fg"],
-        selectbackground=UI_STYLE["button_bg"],
+        selectbackground=palette.listbox_select_bg,
         selectforeground=UI_STYLE["fg"],
+        highlightbackground=palette.listbox_border,
         highlightthickness=0,
         relief="flat",
         font=(UI_STYLE["font_family"], UI_STYLE["font_size"]),

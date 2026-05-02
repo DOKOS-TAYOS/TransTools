@@ -1,16 +1,35 @@
 """Main menu module for TransTools."""
 
+from __future__ import annotations
+
 import sys
+import tkinter as tk
 from pathlib import Path
 from tkinter import BooleanVar, StringVar, Tk, Toplevel, ttk
-from typing import Callable
+from typing import Callable, TypedDict
 
 from PIL import Image, ImageTk
 
 from config import UI_STYLE, __version__
-from config.theme import prepare_ttk_window
+from config.theme import get_surface_palette, prepare_ttk_window
 from frontend.window_utils import place_window_centered
 from i18n import t
+
+
+class MenuActionSpec(TypedDict):
+    """Button metadata for a landing-page action."""
+
+    action_key: str
+    label_key: str
+    style: str
+
+
+class MenuSectionSpec(TypedDict):
+    """Section metadata for a group of landing-page actions."""
+
+    title_key: str
+    description_key: str
+    items: tuple[MenuActionSpec, ...]
 
 
 def _load_menu_logo() -> ImageTk.PhotoImage | None:
@@ -24,8 +43,8 @@ def _load_menu_logo() -> ImageTk.PhotoImage | None:
     except Exception:
         return None
 
-    max_width = 560
-    max_height = 235
+    max_width = 360
+    max_height = 180
     image.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
     return ImageTk.PhotoImage(image)
 
@@ -34,6 +53,120 @@ def get_summary_toggle_label(is_expanded: bool) -> str:
     """Return the label used to show or hide the quick summary."""
     key = "companion.menu_summary_hide" if is_expanded else "companion.menu_summary_show"
     return t(key)
+
+
+def build_menu_sections() -> tuple[MenuSectionSpec, ...]:
+    """Return the premium landing-page sections shown on the main menu."""
+    return (
+        {
+            "title_key": "menu.section_capture",
+            "description_key": "menu.section_capture_desc",
+            "items": (
+                {
+                    "action_key": "voice_study",
+                    "label_key": "menu.voice_record",
+                    "style": "MenuCard.TButton",
+                },
+                {
+                    "action_key": "medication",
+                    "label_key": "menu.medication_record",
+                    "style": "MenuCard.TButton",
+                },
+                {
+                    "action_key": "other_records",
+                    "label_key": "menu.other_records",
+                    "style": "MenuCard.TButton",
+                },
+                {
+                    "action_key": "habits",
+                    "label_key": "menu.habits",
+                    "style": "MenuCard.TButton",
+                },
+            ),
+        },
+        {
+            "title_key": "menu.section_support",
+            "description_key": "menu.section_support_desc",
+            "items": (
+                {
+                    "action_key": "companion",
+                    "label_key": "menu.companion",
+                    "style": "MenuCard.TButton",
+                },
+                {
+                    "action_key": "view_data",
+                    "label_key": "menu.view_data",
+                    "style": "MenuCard.TButton",
+                },
+                {
+                    "action_key": "contacts",
+                    "label_key": "menu.info_contacts",
+                    "style": "MenuCard.TButton",
+                },
+                {
+                    "action_key": "app_info",
+                    "label_key": "menu.app_info",
+                    "style": "MenuCard.TButton",
+                },
+            ),
+        },
+        {
+            "title_key": "menu.section_settings",
+            "description_key": "menu.section_settings_desc",
+            "items": (
+                {
+                    "action_key": "config",
+                    "label_key": "menu.config",
+                    "style": "Utility.TButton",
+                },
+                {
+                    "action_key": "exit",
+                    "label_key": "menu.exit",
+                    "style": "Danger.TButton",
+                },
+            ),
+        },
+    )
+
+
+def _create_section_card(
+    parent: ttk.Frame,
+    *,
+    title: str,
+    description: str,
+    items: tuple[MenuActionSpec, ...],
+    callbacks: dict[str, Callable[[], None]],
+    button_width: int,
+) -> ttk.Frame:
+    """Create a reusable card with a section heading and action buttons."""
+    card = ttk.Frame(parent, style="Card.TFrame", padding=18)
+    header = ttk.Label(card, text=title, style="CardTitle.TLabel")
+    body = ttk.Label(
+        card,
+        text=description,
+        style="CardMuted.TLabel",
+        justify="left",
+        wraplength=360,
+    )
+
+    header.grid(column=0, row=0, columnspan=2, sticky="w")
+    body.grid(column=0, row=1, columnspan=2, sticky="ew", pady=(6, 14))
+
+    for column in (0, 1):
+        card.columnconfigure(column, weight=1)
+
+    for index, item in enumerate(items):
+        row = (index // 2) + 2
+        column = index % 2
+        ttk.Button(
+            card,
+            text=t(item["label_key"]),
+            command=callbacks[item["action_key"]],
+            style=item["style"],
+            width=button_width,
+        ).grid(column=column, row=row, padx=4, pady=4, sticky="ew")
+
+    return card
 
 
 def create_main_menu(
@@ -49,195 +182,121 @@ def create_main_menu(
     dashboard_summary_provider: Callable[[], str] | None,
     exit_callback: Callable[[], None],
 ) -> Tk:
-    """Create and display the main menu window.
-
-    Args:
-        voice_study_callback: Called when user selects voice study.
-        medication_callback: Called when user selects medication register.
-        other_records_callback: Called when user selects other records.
-        habits_callback: Called when user selects habit checklist.
-        companion_callback: Called when user selects companion center.
-        contacts_callback: Called when user selects support contacts.
-        app_info_callback: Called when user selects application info.
-        view_data_callback: Called when user selects unified data view.
-        config_callback: Called when user selects config.
-        dashboard_summary_provider: Optional summary provider shown in the menu.
-        exit_callback: Called when user selects exit.
-
-    Returns:
-        The main menu Tk window.
-    """
+    """Create and display the main menu window."""
     menu = Tk()
     prepare_ttk_window(menu)
-    menu.title(f"{t('menu.title')} — v{__version__}")
+    palette = get_surface_palette()
+
+    menu.title(f"{t('menu.title')} - v{__version__}")
     menu.configure(background=UI_STYLE["bg"])
     menu.resizable(width=False, height=False)
     menu.protocol("WM_DELETE_WINDOW", lambda: show_exit_confirmation(menu))
 
-    main_frame = ttk.Frame(menu, padding=UI_STYLE["padding"])
+    pad = int(UI_STYLE["padding"])
+    main_frame = ttk.Frame(menu, style="App.TFrame", padding=max(12, pad * 2))
+    main_frame.grid(column=0, row=0, sticky="nsew")
+    main_frame.columnconfigure(0, weight=1)
+    main_frame.columnconfigure(1, weight=1)
+
     logo_image = _load_menu_logo()
     if logo_image is not None:
         menu._logo_image = logo_image  # type: ignore[attr-defined]
 
-    logo_label = None
+    hero_frame = tk.Frame(
+        main_frame,
+        bg=palette.hero_bg,
+        highlightthickness=1,
+        highlightbackground=palette.panel_highlight,
+        padx=24,
+        pady=22,
+    )
+    hero_frame.grid(column=0, row=0, columnspan=2, sticky="ew", pady=(0, pad + 6))
+    hero_frame.grid_columnconfigure(0, weight=1)
+
+    current_hero_row = 0
     if logo_image is not None:
-        logo_label = ttk.Label(main_frame, image=logo_image)
-    welcome = ttk.Label(main_frame, text=t("menu.welcome"), wraplength=620, justify="center")
-    version_label = ttk.Label(main_frame, text=f"v{__version__}")
+        logo_label = tk.Label(hero_frame, image=logo_image, bg=palette.hero_bg, bd=0)
+        logo_label.grid(column=0, row=current_hero_row, sticky="n", pady=(0, 10))
+        current_hero_row += 1
 
-    pad = UI_STYLE["padding"]
-    btn_width = max(UI_STYLE["button_width_wide"], 24)
-    btn_width_small = max(UI_STYLE["button_width"], 18)
+    ttk.Label(hero_frame, text=t("menu.title"), style="HeroTitle.TLabel").grid(
+        column=0,
+        row=current_hero_row,
+        sticky="n",
+    )
+    current_hero_row += 1
 
-    dashboard_summary_var = None
-    dashboard_summary_expanded_var = None
-    dashboard_summary_toggle_var = None
-    dashboard_frame = None
-    dashboard_content_frame = None
-    summary_toggle_btn = None
+    ttk.Label(
+        hero_frame,
+        text=t("menu.welcome"),
+        style="HeroSubtitle.TLabel",
+        justify="center",
+        wraplength=760,
+    ).grid(column=0, row=current_hero_row, sticky="ew", pady=(8, 10))
+    current_hero_row += 1
+
+    ttk.Label(hero_frame, text=f"v{__version__}", style="HeroMeta.TLabel").grid(
+        column=0,
+        row=current_hero_row,
+        sticky="n",
+    )
+
+    callbacks: dict[str, Callable[[], None]] = {
+        "voice_study": lambda: voice_study_callback(menu),
+        "medication": lambda: medication_callback(menu),
+        "other_records": lambda: other_records_callback(menu),
+        "habits": lambda: habits_callback(menu),
+        "companion": lambda: companion_callback(menu),
+        "contacts": lambda: contacts_callback(menu),
+        "app_info": lambda: app_info_callback(menu),
+        "view_data": lambda: view_data_callback(menu),
+        "config": lambda: config_callback(menu),
+        "exit": exit_callback,
+    }
+
     if dashboard_summary_provider is not None:
+        summary_card = ttk.Frame(main_frame, style="Card.TFrame", padding=18)
+        summary_card.grid(column=0, row=1, columnspan=2, sticky="ew", pady=(0, pad + 2))
+        summary_card.columnconfigure(0, weight=1)
+
         dashboard_summary_var = StringVar(value="")
         dashboard_summary_expanded_var = BooleanVar(value=False)
         dashboard_summary_toggle_var = StringVar(value=get_summary_toggle_label(False))
-        dashboard_frame = ttk.Frame(main_frame)
-        header_frame = ttk.Frame(dashboard_frame)
-        header_frame.pack(fill="x", padx=pad, pady=(pad, 6))
+
+        ttk.Label(
+            summary_card,
+            text=t("companion.menu_summary_title"),
+            style="CardTitle.TLabel",
+        ).grid(column=0, row=0, sticky="w")
+        ttk.Button(
+            summary_card,
+            text=t("menu.companion"),
+            command=callbacks["companion"],
+            style="Accent.TButton",
+            width=max(16, int(UI_STYLE["button_width"])),
+        ).grid(column=1, row=0, sticky="e", padx=(pad, 0))
+
+        summary_text = ttk.Label(
+            summary_card,
+            textvariable=dashboard_summary_var,
+            style="SummaryBody.TLabel",
+            justify="left",
+            wraplength=760,
+        )
         summary_toggle_btn = ttk.Button(
-            header_frame,
+            summary_card,
             textvariable=dashboard_summary_toggle_var,
             style="SummaryToggle.TButton",
         )
-        summary_toggle_btn.pack(anchor="center")
-
-        dashboard_content_frame = ttk.Frame(dashboard_frame)
-        ttk.Label(
-            dashboard_content_frame,
-            textvariable=dashboard_summary_var,
-            wraplength=620,
-            justify="left",
-        ).pack(fill="x", pady=(0, 6))
-        ttk.Button(
-            dashboard_content_frame,
-            text=t("menu.companion"),
-            command=lambda: companion_callback(menu),
-            width=btn_width,
-        ).pack(anchor="w")
-
-    voice_study_btn = ttk.Button(
-        main_frame,
-        text=t("menu.voice_record"),
-        command=lambda: voice_study_callback(menu),
-        width=btn_width,
-    )
-    medication_btn = ttk.Button(
-        main_frame,
-        text=t("menu.medication_record"),
-        command=lambda: medication_callback(menu),
-        width=btn_width,
-    )
-    other_records_btn = ttk.Button(
-        main_frame,
-        text=t("menu.other_records"),
-        command=lambda: other_records_callback(menu),
-        width=btn_width,
-    )
-    habits_btn = ttk.Button(
-        main_frame,
-        text=t("menu.habits"),
-        command=lambda: habits_callback(menu),
-        width=btn_width,
-    )
-    companion_btn = ttk.Button(
-        main_frame,
-        text=t("menu.companion"),
-        command=lambda: companion_callback(menu),
-        width=btn_width,
-    )
-    contacts_btn = ttk.Button(
-        main_frame,
-        text=t("menu.info_contacts"),
-        command=lambda: contacts_callback(menu),
-        width=btn_width,
-    )
-    app_info_btn = ttk.Button(
-        main_frame,
-        text=t("menu.app_info"),
-        command=lambda: app_info_callback(menu),
-        width=btn_width,
-    )
-    view_data_btn = ttk.Button(
-        main_frame,
-        text=t("menu.view_data"),
-        command=lambda: view_data_callback(menu),
-        width=btn_width,
-    )
-    config_btn = ttk.Button(
-        main_frame,
-        text=t("menu.config"),
-        command=lambda: config_callback(menu),
-        width=btn_width_small,
-    )
-    exit_btn = ttk.Button(
-        main_frame,
-        text=t("menu.exit"),
-        command=exit_callback,
-        style="Danger.TButton",
-        width=btn_width_small,
-    )
-
-    current_row = 0
-    if logo_label is not None:
-        logo_label.grid(column=0, row=current_row, columnspan=2, padx=pad, pady=(pad, 8))
-        current_row += 1
-    welcome.grid(column=0, row=current_row, columnspan=2, padx=pad, pady=(0, pad))
-    current_row += 1
-    version_label.grid(column=0, row=current_row, columnspan=2, padx=pad, pady=(0, pad))
-    current_row += 1
-    if dashboard_frame is not None:
-        dashboard_frame.grid(
-            column=0,
-            row=current_row,
-            columnspan=2,
-            sticky="ew",
-            padx=pad,
-            pady=(0, pad),
-        )
-        current_row += 1
-    voice_study_btn.grid(column=0, row=current_row, padx=pad, pady=pad)
-    medication_btn.grid(column=1, row=current_row, padx=pad, pady=pad)
-    current_row += 1
-    other_records_btn.grid(column=0, row=current_row, padx=pad, pady=pad)
-    habits_btn.grid(column=1, row=current_row, padx=pad, pady=pad)
-    current_row += 1
-    companion_btn.grid(column=0, row=current_row, padx=pad, pady=pad)
-    view_data_btn.grid(column=1, row=current_row, padx=pad, pady=pad)
-    current_row += 1
-    contacts_btn.grid(column=0, row=current_row, padx=pad, pady=pad)
-    app_info_btn.grid(column=1, row=current_row, padx=pad, pady=pad)
-    current_row += 1
-    config_btn.grid(column=0, row=current_row, padx=pad, pady=pad)
-    exit_btn.grid(column=1, row=current_row, padx=pad, pady=pad)
-
-    main_frame.columnconfigure(0, weight=1)
-    main_frame.columnconfigure(1, weight=1)
-    main_frame.pack(fill="both", expand=True)
-
-    if (
-        dashboard_summary_provider is not None
-        and dashboard_summary_var is not None
-        and dashboard_summary_expanded_var is not None
-        and dashboard_summary_toggle_var is not None
-        and dashboard_content_frame is not None
-        and summary_toggle_btn is not None
-    ):
+        summary_toggle_btn.grid(column=0, row=1, sticky="w", pady=(8, 0))
 
         def _apply_summary_visibility() -> None:
             is_expanded = bool(dashboard_summary_expanded_var.get())
             dashboard_summary_toggle_var.set(get_summary_toggle_label(is_expanded))
             if is_expanded:
-                dashboard_content_frame.pack(fill="x", padx=pad, pady=(0, pad))
+                summary_text.grid(column=0, row=2, columnspan=2, sticky="ew", pady=(10, 0))
             else:
-                dashboard_content_frame.pack_forget()
+                summary_text.grid_forget()
 
         def _refresh_summary() -> None:
             try:
@@ -256,56 +315,80 @@ def create_main_menu(
         _refresh_summary()
         _apply_summary_visibility()
 
-    place_window_centered(menu)
+    btn_width = max(int(UI_STYLE["button_width"]), 18)
+    sections = build_menu_sections()
+    section_positions = (
+        (0, 2, 1),
+        (1, 2, 1),
+        (0, 3, 2),
+    )
+    for section, (column, row, span) in zip(sections, section_positions, strict=True):
+        section_card = _create_section_card(
+            main_frame,
+            title=t(section["title_key"]),
+            description=t(section["description_key"]),
+            items=section["items"],
+            callbacks=callbacks,
+            button_width=btn_width,
+        )
+        section_card.grid(
+            column=column,
+            row=row,
+            columnspan=span,
+            sticky="nsew",
+            padx=(0, pad // 2 if column == 0 and span == 1 else 0),
+            pady=(0, pad),
+        )
+        if column == 1:
+            section_card.grid_configure(padx=(pad // 2, 0))
+
+    place_window_centered(menu, width=1000, height=780)
     return menu
 
 
 def show_exit_confirmation(parent_menu: Tk) -> None:
-    """Show exit confirmation dialog.
-
-    Args:
-        parent_menu: Main menu Tk window.
-    """
+    """Show exit confirmation dialog."""
     exit_dlg = Toplevel(parent_menu)
     prepare_ttk_window(exit_dlg)
     exit_dlg.title(t("menu.exit_title"))
     exit_dlg.resizable(width=False, height=False)
     exit_dlg.configure(background=UI_STYLE["bg"])
 
-    msg = ttk.Label(exit_dlg, text=t("menu.exit_confirm"))
-    yes_btn = ttk.Button(
-        exit_dlg,
+    body = ttk.Frame(exit_dlg, style="Card.TFrame", padding=20)
+    body.pack(fill="both", expand=True, padx=18, pady=18)
+    body.columnconfigure(0, weight=1)
+    body.columnconfigure(1, weight=1)
+
+    ttk.Label(body, text=t("menu.exit_confirm"), style="CardTitle.TLabel", justify="center").grid(
+        column=0,
+        row=0,
+        columnspan=2,
+        pady=(0, 16),
+    )
+    ttk.Button(
+        body,
         text=t("menu.yes"),
         command=lambda: _close_application(parent_menu),
         style="Danger.TButton",
-        width=UI_STYLE["button_width"],
-    )
-    no_btn = ttk.Button(
-        exit_dlg,
+        width=max(12, int(UI_STYLE["button_width"])),
+    ).grid(column=0, row=1, padx=6, sticky="ew")
+    ttk.Button(
+        body,
         text=t("menu.no"),
         command=exit_dlg.destroy,
-        style="Accent.TButton",
-        width=UI_STYLE["button_width"],
-    )
-
-    pad = UI_STYLE["padding"]
-    msg.pack(padx=pad, pady=pad)
-    yes_btn.pack(side="left", padx=pad, pady=pad)
-    no_btn.pack(side="right", padx=pad, pady=pad)
+        style="Utility.TButton",
+        width=max(12, int(UI_STYLE["button_width"])),
+    ).grid(column=1, row=1, padx=6, sticky="ew")
 
     exit_dlg.protocol("WM_DELETE_WINDOW", exit_dlg.destroy)
-    place_window_centered(exit_dlg)
+    place_window_centered(exit_dlg, width=420, height=200)
     exit_dlg.transient(parent_menu)
     exit_dlg.grab_set()
     parent_menu.wait_window(exit_dlg)
 
 
 def _close_application(menu: Tk) -> None:
-    """Close the application.
-
-    Args:
-        menu: Main menu Tk window to destroy.
-    """
+    """Close the application."""
     menu.destroy()
     sys.exit()
 
@@ -323,21 +406,7 @@ def start_main_menu(
     dashboard_summary_provider: Callable[[], str] | None = None,
     startup_callback: Callable[[Tk], None] | None = None,
 ) -> None:
-    """Create and run the main menu.
-
-    Args:
-        voice_study_callback: Called when user selects voice study.
-        medication_callback: Called when user selects medication register.
-        other_records_callback: Called when user selects other records.
-        habits_callback: Called when user selects habits.
-        companion_callback: Called when user selects companion center.
-        contacts_callback: Called when user selects contacts.
-        app_info_callback: Called when user selects application info.
-        view_data_callback: Called when user selects data view.
-        config_callback: Called when user selects config.
-        dashboard_summary_provider: Optional provider for compact summary text.
-        startup_callback: Optional callback executed after menu creation.
-    """
+    """Create and run the main menu."""
     menu = create_main_menu(
         voice_study_callback=voice_study_callback,
         medication_callback=medication_callback,
