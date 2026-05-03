@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The repo now exposes a `dev` extra for local quality tools, and GitHub Actions installs that extra so `pyright` runs together with Ruff and pytest in CI.
 - The fake-history generator script now rebuilds `patient_history.json` with the current record schema, fills companion records such as roadmap items, appointment prep, wellbeing logs, and milestones, extends generated data through the current day, and still preserves existing voice rows that already point to saved audio files.
 - Scroll-heavy primary windows now open slightly taller by default, and the main menu also starts a bit higher, giving the companion center, contacts directory, configuration dialog, and landing screen more vertical room so their scrollbars stay still more often on the current default UI size; the `Ver mis datos` window keeps a slightly shorter dedicated height to avoid feeling oversized.
 - Collapsible information sections now use cleaner chevron icons for their open/closed state instead of plain `>` / `v` text.
@@ -54,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The remaining untyped helpers flagged during the public-release review now declare explicit parameter and return types in the other-records dialog and voice-privacy Fernet builder.
 - Full profile deletion now also removes any legacy project-local profile copy in `output/`, preventing old data from being auto-migrated back after restart and making the reset behave like a true fresh start.
 - Button copy and feedback are now more explicit in key dialogs: onboarding now uses a clearer `Cancelar y salir` action, configuration checkboxes explain their exact effect next to the toggle, and companion actions that require a selected row now tell the user what to select instead of failing silently.
 - Profile import now validates exported JSON and the local voice-metrics key before replacing local data, so corrupt bundles fail fast instead of only breaking after restart.

@@ -4,12 +4,24 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from config.paths import get_output_dir
 from utils import ConfigError, get_logger
 
 logger = get_logger(__name__)
+
+
+class FernetProtocol(Protocol):
+    """Minimal Fernet surface used by the privacy service."""
+
+    def encrypt(self, data: bytes) -> bytes:
+        """Encrypt raw bytes into a token."""
+        ...
+
+    def decrypt(self, token: bytes, ttl: int | None = None) -> bytes:
+        """Decrypt a previously encrypted token."""
+        ...
 
 
 class VoicePrivacyService:
@@ -25,7 +37,7 @@ class VoicePrivacyService:
             key_path = get_output_dir() / ".voice_metrics.key"
         self.key_path = key_path
         self.key_path.parent.mkdir(parents=True, exist_ok=True)
-        self._fernet = self._build_fernet()
+        self._fernet: FernetProtocol = self._build_fernet()
 
     def encrypt_metrics(self, payload: dict[str, Any]) -> str:
         """Encrypt a metrics dictionary.
@@ -57,7 +69,7 @@ class VoicePrivacyService:
             logger.warning("Could not decrypt voice metrics entry")
             return None
 
-    def _build_fernet(self):
+    def _build_fernet(self) -> FernetProtocol:
         """Build a Fernet instance from local key file."""
         try:
             from cryptography.fernet import Fernet

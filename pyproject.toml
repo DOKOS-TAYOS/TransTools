@@ -38,6 +38,13 @@ dependencies = [
     "cryptography>=45.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pyright",
+    "pytest",
+    "ruff",
+]
+
 [project.scripts]
 transtools = "main:main"
 

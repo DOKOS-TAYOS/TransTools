@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import date
-from tkinter import BooleanVar, IntVar, StringVar, Text, Toplevel, messagebox, ttk
+from tkinter import BooleanVar, IntVar, StringVar, Text, Tk, Toplevel, messagebox, ttk
+from typing import TYPE_CHECKING
 
 from config import UI_STYLE
 from config.theme import prepare_ttk_window
@@ -17,8 +19,14 @@ from utils import DataStoreError, get_logger
 
 logger = get_logger(__name__)
 
+if TYPE_CHECKING:
+    from core.service import AppService
 
-def show_other_records_dialog(parent, app_service=None) -> None:
+
+def show_other_records_dialog(
+    parent: Tk | Toplevel,
+    app_service: AppService | None = None,
+) -> None:
     """Show dialog for visits and custom event logs.
 
     Args:
@@ -77,7 +85,7 @@ def show_other_records_dialog(parent, app_service=None) -> None:
     place_window_centered(dlg, width=target_width, height=target_height)
 
 
-def _build_visit_tab(frame, app_service):
+def _build_visit_tab(frame: ttk.Frame, app_service: AppService) -> Callable[[], None]:
     """Create visit logging tab content."""
     visit_type_var = StringVar(value="medical")
     status_var = StringVar(value="")
@@ -202,7 +210,7 @@ def _build_visit_tab(frame, app_service):
     return _save_visit
 
 
-def _build_event_tab(frame, app_service):
+def _build_event_tab(frame: ttk.Frame, app_service: AppService) -> Callable[[], None]:
     """Create free event logging tab content."""
     category_var = StringVar(value="general")
     tags_var = StringVar(value="")

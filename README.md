@@ -241,6 +241,30 @@ python src/main.py
 
 TransTools esta pensado para ejecutarse siempre dentro de `.venv`.
 
+### Comprobaciones de desarrollo
+
+Si vas a trabajar sobre el codigo del repo, puedes dejar la misma caja de herramientas que usa CI dentro de tu `.venv`.
+
+#### Windows (PowerShell)
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+pip install -e ".[dev]"
+ruff check .
+pyright
+pytest -q
+```
+
+#### Linux
+
+```bash
+source .venv/bin/activate
+pip install -e ".[dev]"
+ruff check .
+pyright
+pytest -q
+```
+
 ## Configuracion rapida (.env)
 
 Variables mas importantes:
