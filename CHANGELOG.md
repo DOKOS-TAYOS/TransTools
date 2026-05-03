@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-03
+
 ### Added
 
 - Configuration dialog now includes full-profile export/import/delete actions for moving or fully resetting local user data, including profile/history JSON files, the local voice-metrics key, and saved audio when present; destructive deletion now also requires typing `BORRAR`.
