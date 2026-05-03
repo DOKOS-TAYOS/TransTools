@@ -43,9 +43,15 @@ Puesta en marcha
 Para trabajar directamente desde el repositorio:
 
 - en Windows: ``setup.bat`` y despues ``bin\run.bat``
-- en Linux: ``./setup.sh`` y despues ``./bin/run.sh``
+- en Linux: ``chmod +x setup.sh bin/run.sh`` seguido de ``./setup.sh`` y ``./bin/run.sh``
 
-El ``README.md`` del repo contiene una guia mas completa de instalacion, configuracion y uso recomendado.
+Detalles utiles del flujo actual:
+
+- ``setup.bat`` y ``setup.sh`` crean o reutilizan ``.venv``, instalan dependencias y preparan ``.env``.
+- ``bin\run.bat --check`` y ``./bin/run.sh --check`` validan la instalacion sin abrir la app.
+- ``install.bat`` e ``install.sh`` sirven como flujo de clonado + preparacion en un solo paso.
+
+El ``README.md`` del repo contiene la guia mas completa de instalacion, configuracion, solucion de problemas y uso recomendado.
 
 Referencia para desarrollo
 --------------------------
