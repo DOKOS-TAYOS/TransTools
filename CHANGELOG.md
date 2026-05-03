@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The configuration dialog now limits appearance settings to a fixed day/night theme mode plus one global font-size control, with the rest of the UI styling derived automatically and older visual `.env` keys retired.
 - Reviewed the adaptive habit catalog so extreme, overly medical, clinical, unusually niche, overly normative/social-pressure, or strongly resource-dependent entries were removed from the base catalog and locale habit labels, and older saved profiles/logs are pruned to the same safer set during migration.
 - Voice recording now always registers the sample for the current day, and the recording dialog no longer mixes in self-reported emotional scoring because that check-in belongs in a separate flow.
 - Scrollable Tk panels now react to the mouse wheel from any child control inside the panel, appointment writing areas were tightened so the `Citas` form fits more often without needing its scrollbar, and screen-fit sizing now leaves a larger vertical safety margin on Windows so dialogs are less likely to extend off-screen.

@@ -3,13 +3,28 @@
 from __future__ import annotations
 
 import re
+import sys
 from dataclasses import dataclass
 from tkinter import Misc, TclError, ttk
+from tkinter import font as tkfont
 from typing import Any
 
 from config.env import get_env_from_schema
 
 UI_STYLE: dict[str, Any] = {}
+
+
+@dataclass(frozen=True)
+class ThemePreset:
+    """Fixed theme tokens for a supported appearance mode."""
+
+    mode: str
+    bg: str
+    fg: str
+    button_bg: str
+    chart_line: str
+    calendar_activity_bg: str
+    calendar_activity_fg: str
 
 
 @dataclass(frozen=True)
@@ -57,6 +72,28 @@ class ThemeSizing:
     tree_rowheight: int
     spinbox_arrowsize: int
     check_indicator_size: int
+
+
+_THEME_PRESETS: dict[str, ThemePreset] = {
+    "dark": ThemePreset(
+        mode="dark",
+        bg="#10161B",
+        fg="#F2F5F7",
+        button_bg="#1E2D38",
+        chart_line="#73B4D8",
+        calendar_activity_bg="#274C64",
+        calendar_activity_fg="#F2F8FC",
+    ),
+    "light": ThemePreset(
+        mode="light",
+        bg="#F5F7FA",
+        fg="#16202A",
+        button_bg="#DCE5EC",
+        chart_line="#2E6F91",
+        calendar_activity_bg="#D7EAF7",
+        calendar_activity_fg="#0F3A56",
+    ),
+}
 
 
 def _is_hex_color(value: str) -> bool:
@@ -161,10 +198,42 @@ def get_surface_palette() -> ThemeSurfacePalette:
     )
 
 
-def build_theme_sizing(font_size: int, padding: int) -> ThemeSizing:
-    """Build compact shared sizing values from the active font and padding."""
+def get_theme_preset(mode: str | None = None) -> ThemePreset:
+    """Return the fixed preset for the requested theme mode."""
+    requested_mode = (mode or "dark").strip().lower()
+    return _THEME_PRESETS.get(requested_mode, _THEME_PRESETS["dark"])
+
+
+def _fallback_font_family() -> str:
+    """Return a reasonable system-style font fallback when Tk is unavailable."""
+    if sys.platform == "win32":
+        return "Segoe UI"
+    if sys.platform == "darwin":
+        return "SF Pro Text"
+    return "DejaVu Sans"
+
+
+def resolve_system_font_family(root: Misc | None = None) -> str:
+    """Resolve the current Tk default font family or use a platform fallback."""
+    try:
+        default_font = tkfont.nametofont("TkDefaultFont", root=root)
+        family = str(default_font.actual("family")).strip()
+        if family:
+            return family
+    except (RuntimeError, TclError):
+        pass
+    return _fallback_font_family()
+
+
+def _derive_layout_padding(font_size: int) -> int:
+    """Derive shared layout spacing from the base font size."""
+    return max(4, round(max(8, int(font_size)) * 0.375))
+
+
+def build_theme_sizing(font_size: int) -> ThemeSizing:
+    """Build compact shared sizing values from the active font size."""
     normalized_font_size = max(8, int(font_size))
-    normalized_padding = max(2, int(padding))
+    normalized_padding = _derive_layout_padding(normalized_font_size)
     button_padding = (max(6, normalized_padding), max(4, normalized_padding - 2))
     summary_button_padding = (max(6, normalized_padding), max(3, normalized_padding - 3))
     notebook_tab_padding = (max(10, normalized_padding + 4), max(5, normalized_padding - 1))
@@ -187,26 +256,32 @@ def build_theme_sizing(font_size: int, padding: int) -> ThemeSizing:
 
 def _build_ui_style() -> dict[str, Any]:
     """Build UI style dict from env."""
+    theme_mode = str(get_env_from_schema("UI_THEME_MODE"))
+    font_size = int(get_env_from_schema("UI_FONT_SIZE"))
+    preset = get_theme_preset(theme_mode)
+    padding = _derive_layout_padding(font_size)
+    button_width = max(12, round(font_size * 0.75))
     return {
-        "bg": get_env_from_schema("UI_BACKGROUND"),
-        "fg": get_env_from_schema("UI_FOREGROUND"),
-        "padding": get_env_from_schema("UI_PADDING"),
-        "button_width": get_env_from_schema("UI_BUTTON_WIDTH"),
-        "button_width_wide": get_env_from_schema("UI_BUTTON_WIDTH_WIDE"),
-        "button_bg": get_env_from_schema("UI_BUTTON_BG"),
-        "button_fg": get_env_from_schema("UI_BUTTON_FG"),
-        "button_fg_cancel": get_env_from_schema("UI_BUTTON_FG_CANCEL"),
-        "button_fg_accent": get_env_from_schema("UI_BUTTON_FG_ACCENT2"),
-        "font_family": get_env_from_schema("UI_FONT_FAMILY"),
-        "font_size": get_env_from_schema("UI_FONT_SIZE"),
-        "border_width": 8,
+        "theme_mode": preset.mode,
+        "bg": preset.bg,
+        "fg": preset.fg,
+        "padding": padding,
+        "button_width": button_width,
+        "button_bg": preset.button_bg,
+        "font_family": resolve_system_font_family(),
+        "font_size": font_size,
+        "chart_line": preset.chart_line,
+        "calendar_activity_bg": preset.calendar_activity_bg,
+        "calendar_activity_fg": preset.calendar_activity_fg,
     }
 
 
-def refresh_theme() -> None:
+def refresh_theme(root: Misc | None = None) -> None:
     """Refresh UI_STYLE from config."""
-    global UI_STYLE
-    UI_STYLE = _build_ui_style()
+    updated_style = _build_ui_style()
+    updated_style["font_family"] = resolve_system_font_family(root)
+    UI_STYLE.clear()
+    UI_STYLE.update(updated_style)
 
 
 def _configure_button_style(
@@ -260,7 +335,7 @@ def configure_ttk_styles(root: Misc) -> None:
     btn_bg = str(UI_STYLE["button_bg"])
 
     palette = get_surface_palette()
-    sizing = build_theme_sizing(int(UI_STYLE["font_size"]), int(UI_STYLE["padding"]))
+    sizing = build_theme_sizing(int(UI_STYLE["font_size"]))
 
     btn_hover = _blend_hex_colors(btn_bg, "#ffffff", 0.14)
     btn_pressed = _blend_hex_colors(btn_bg, bg, 0.10)
@@ -552,7 +627,7 @@ def configure_ttk_styles(root: Misc) -> None:
 
 def prepare_ttk_window(root: Misc) -> None:
     """Refresh the theme and reapply shared ttk styling on a window."""
-    refresh_theme()
+    refresh_theme(root)
     configure_ttk_styles(root)
 
 

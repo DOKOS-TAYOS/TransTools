@@ -61,6 +61,12 @@ chmod +x install.sh
 
 Todo se ejecuta sobre `.venv` (no usa el Python global del sistema para correr la app).
 
+## Apariencia
+
+- La interfaz solo permite ajustar `UI_THEME_MODE` (`dark` o `light`) y `UI_FONT_SIZE`.
+- El resto del estilo visual se calcula automÃ¡ticamente a partir de esos dos valores.
+- La fuente se toma del sistema operativo/Tk para que la app se comporte mejor en Windows y Linux.
+
 ## Dónde se guardan los datos
 
 - Por defecto, TransTools guarda los datos de usuario en una carpeta de usuario del sistema:

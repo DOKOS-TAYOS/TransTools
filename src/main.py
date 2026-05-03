@@ -89,11 +89,11 @@ def _view_data_callback(menu, app_service) -> None:
     show_data_view_dialog(menu, app_service=app_service)
 
 
-def _config_callback(menu, app_service) -> None:
+def _config_callback(menu: Any) -> None:
     """Open config dialog. Restarts app if user saves changes."""
     from frontend.ui_dialogs.config_dialog import show_config_dialog
 
-    if show_config_dialog(menu, app_service=app_service):
+    if show_config_dialog(menu):
         menu.destroy()
         restart_command = _build_restart_command()
         os.execv(restart_command[0], restart_command)
@@ -183,7 +183,7 @@ def main() -> None:
             contacts_callback=lambda menu: _contacts_callback(menu, app_service),
             app_info_callback=lambda menu: _app_info_callback(menu, app_service),
             view_data_callback=lambda menu: _view_data_callback(menu, app_service),
-            config_callback=lambda menu: _config_callback(menu, app_service),
+            config_callback=_config_callback,
             dashboard_summary_provider=lambda: _dashboard_summary_text(app_service),
             startup_callback=lambda menu: _startup_callback(menu, app_service),
         )

@@ -1,14 +1,30 @@
 """Configuration dialog for TransTools."""
 
+from __future__ import annotations
+
 from pathlib import Path
 from tkinter import BooleanVar, Canvas, IntVar, StringVar, TclError, Tk, Toplevel, messagebox, ttk
-from typing import Any
+from typing import Any, cast
 
 from config import UI_STYLE, get_current_env_values, write_env_file
 from config.env import get_env_from_schema
 from config.theme import prepare_ttk_window
+from frontend.input_widgets import create_combobox, create_entry, create_spinbox
 from frontend.window_utils import place_window_centered
 from i18n import t
+
+LEGACY_VISUAL_ENV_KEYS: tuple[str, ...] = (
+    "UI_BACKGROUND",
+    "UI_FOREGROUND",
+    "UI_BUTTON_BG",
+    "UI_BUTTON_FG",
+    "UI_BUTTON_FG_CANCEL",
+    "UI_BUTTON_FG_ACCENT2",
+    "UI_FONT_FAMILY",
+    "UI_PADDING",
+    "UI_BUTTON_WIDTH",
+    "UI_BUTTON_WIDTH_WIDE",
+)
 
 
 def _add_param_row(
@@ -38,20 +54,69 @@ def _add_param_row(
     return row + 2
 
 
-def _bounded_int_value(var: IntVar, minimum: int, maximum: int, default: int) -> str:
-    """Read an IntVar safely and clamp it into the supported bounds."""
+def _bounded_int(raw_value: object, minimum: int, maximum: int, default: int) -> str:
+    """Clamp a Tk-backed or plain integer-like value into the supported bounds."""
     try:
-        return str(max(minimum, min(maximum, var.get())))
-    except (TclError, ValueError):
+        if hasattr(raw_value, "get"):
+            raw_value = cast(Any, raw_value).get()
+        return str(max(minimum, min(maximum, int(cast(Any, raw_value)))))
+    except (TclError, TypeError, ValueError, OverflowError):
         return str(default)
 
 
-def show_config_dialog(parent: Tk | Toplevel, app_service: Any | None = None) -> bool:
+def get_theme_mode_choices() -> tuple[tuple[str, str], ...]:
+    """Return the supported theme-mode values and their translation keys."""
+    return (
+        ("dark", "config.ui.theme_mode_dark"),
+        ("light", "config.ui.theme_mode_light"),
+    )
+
+
+def _normalize_theme_mode(raw_value: str) -> str:
+    """Normalize theme mode to one of the supported persistent values."""
+    theme_mode = str(raw_value).strip().lower()
+    return theme_mode if theme_mode in {"dark", "light"} else "dark"
+
+
+def build_config_values_to_save(
+    current_values: dict[str, str],
+    *,
+    language: str,
+    output_dir: str,
+    save_audio: bool,
+    record_duration_sec: object,
+    log_level: str,
+    log_console: bool,
+    ui_theme_mode: str,
+    ui_font_size: object,
+) -> dict[str, str]:
+    """Build the persisted settings payload for the simplified config dialog."""
+    values = dict(current_values)
+    values["LANGUAGE"] = language.strip() or "es"
+    values["FILE_OUTPUT_DIR"] = output_dir.strip() or "output"
+    values["SAVE_AUDIO"] = "true" if save_audio else "false"
+    values["LOG_CONSOLE"] = "true" if log_console else "false"
+    values["RECORD_DURATION_SEC"] = _bounded_int(
+        record_duration_sec,
+        minimum=5,
+        maximum=60,
+        default=10,
+    )
+    values["LOG_LEVEL"] = log_level.strip().upper() or "INFO"
+    values["UI_THEME_MODE"] = _normalize_theme_mode(ui_theme_mode)
+    values["UI_FONT_SIZE"] = _bounded_int(ui_font_size, minimum=8, maximum=72, default=16)
+
+    for legacy_key in LEGACY_VISUAL_ENV_KEYS:
+        values.pop(legacy_key, None)
+
+    return values
+
+
+def show_config_dialog(parent: Tk | Toplevel) -> bool:
     """Show config dialog.
 
     Args:
         parent: Parent Tk window.
-        app_service: Optional AppService instance to persist profile/health data.
 
     Returns:
         True if user saved and app should restart, False otherwise.
@@ -61,7 +126,6 @@ def show_config_dialog(parent: Tk | Toplevel, app_service: Any | None = None) ->
     dlg.title(t("menu.config"))
     dlg.resizable(width=True, height=True)
     dlg.configure(background=UI_STYLE["bg"])
-    _font = (UI_STYLE["font_family"], UI_STYLE["font_size"])
 
     result = {"saved": False}
     pad = UI_STYLE["padding"]
@@ -107,18 +171,17 @@ def show_config_dialog(parent: Tk | Toplevel, app_service: Any | None = None) ->
         row,
         "config.general.language",
         "config.general.language_desc",
-        ttk.Combobox(
+        create_combobox(
             gen_frame,
             textvariable=lang_var,
             values=("es", "en"),
             width=10,
             state="readonly",
-            font=_font,
         ),
     )
 
     out_var = StringVar(value=get_env_from_schema("FILE_OUTPUT_DIR"))
-    out_entry = ttk.Entry(gen_frame, textvariable=out_var, width=30, font=_font)
+    out_entry = create_entry(gen_frame, textvariable=out_var, width=30)
     row = _add_param_row(
         gen_frame, row, "config.general.output_dir", "config.general.output_dir_desc", out_entry
     )
@@ -138,13 +201,12 @@ def show_config_dialog(parent: Tk | Toplevel, app_service: Any | None = None) ->
         row,
         "config.general.record_duration",
         "config.general.record_duration_desc",
-        ttk.Spinbox(
+        create_spinbox(
             gen_frame,
             from_=5,
             to=60,
             textvariable=dur_var,
             width=8,
-            font=_font,
         ),
     )
 
@@ -154,13 +216,12 @@ def show_config_dialog(parent: Tk | Toplevel, app_service: Any | None = None) ->
         row,
         "config.general.log_level",
         "config.general.log_level_desc",
-        ttk.Combobox(
+        create_combobox(
             gen_frame,
             textvariable=log_var,
             values=("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"),
             width=10,
             state="readonly",
-            font=_font,
         ),
     )
 
@@ -173,180 +234,57 @@ def show_config_dialog(parent: Tk | Toplevel, app_service: Any | None = None) ->
         ttk.Checkbutton(gen_frame, variable=log_console_var, text=""),
     )
 
-    notebook.add(gen_frame, text=t("config.tab_general"))
-
-    # --- UI tab ---
-    ui_frame = ttk.Frame(notebook, padding=UI_STYLE["padding"])
-    row = 0
-
-    ui_bg_var = StringVar(value=get_env_from_schema("UI_BACKGROUND"))
-    row = _add_param_row(
-        ui_frame,
-        row,
-        "config.ui.bg",
-        "config.ui.bg_desc",
-        ttk.Entry(ui_frame, textvariable=ui_bg_var, width=18, font=_font),
+    theme_mode_choices = get_theme_mode_choices()
+    theme_mode_labels = {value: t(label_key) for value, label_key in theme_mode_choices}
+    theme_mode_by_label = {label: value for value, label in theme_mode_labels.items()}
+    ui_theme_mode_var = StringVar(
+        value=theme_mode_labels[_normalize_theme_mode(str(get_env_from_schema("UI_THEME_MODE")))]
     )
-
-    ui_fg_var = StringVar(value=get_env_from_schema("UI_FOREGROUND"))
     row = _add_param_row(
-        ui_frame,
+        gen_frame,
         row,
-        "config.ui.fg",
-        "config.ui.fg_desc",
-        ttk.Entry(ui_frame, textvariable=ui_fg_var, width=18, font=_font),
-    )
-
-    ui_btn_bg_var = StringVar(value=get_env_from_schema("UI_BUTTON_BG"))
-    row = _add_param_row(
-        ui_frame,
-        row,
-        "config.ui.btn_bg",
-        "config.ui.btn_bg_desc",
-        ttk.Entry(ui_frame, textvariable=ui_btn_bg_var, width=18, font=_font),
-    )
-
-    ui_btn_fg_var = StringVar(value=get_env_from_schema("UI_BUTTON_FG"))
-    row = _add_param_row(
-        ui_frame,
-        row,
-        "config.ui.btn_fg",
-        "config.ui.btn_fg_desc",
-        ttk.Entry(ui_frame, textvariable=ui_btn_fg_var, width=18, font=_font),
-    )
-
-    ui_btn_cancel_var = StringVar(value=get_env_from_schema("UI_BUTTON_FG_CANCEL"))
-    row = _add_param_row(
-        ui_frame,
-        row,
-        "config.ui.btn_fg_cancel",
-        "config.ui.btn_fg_cancel_desc",
-        ttk.Entry(ui_frame, textvariable=ui_btn_cancel_var, width=18, font=_font),
-    )
-
-    ui_btn_accent_var = StringVar(value=get_env_from_schema("UI_BUTTON_FG_ACCENT2"))
-    row = _add_param_row(
-        ui_frame,
-        row,
-        "config.ui.btn_fg_accent",
-        "config.ui.btn_fg_accent_desc",
-        ttk.Entry(ui_frame, textvariable=ui_btn_accent_var, width=18, font=_font),
-    )
-
-    ui_font_family_var = StringVar(value=get_env_from_schema("UI_FONT_FAMILY"))
-    row = _add_param_row(
-        ui_frame,
-        row,
-        "config.ui.font_family",
-        "config.ui.font_family_desc",
-        ttk.Entry(ui_frame, textvariable=ui_font_family_var, width=22, font=_font),
+        "config.ui.theme_mode",
+        "config.ui.theme_mode_desc",
+        create_combobox(
+            gen_frame,
+            textvariable=ui_theme_mode_var,
+            values=tuple(theme_mode_by_label),
+            width=18,
+            state="readonly",
+        ),
     )
 
     ui_font_size_var = IntVar(value=get_env_from_schema("UI_FONT_SIZE"))
     row = _add_param_row(
-        ui_frame,
+        gen_frame,
         row,
         "config.ui.font_size",
         "config.ui.font_size_desc",
-        ttk.Spinbox(
-            ui_frame,
+        create_spinbox(
+            gen_frame,
             from_=8,
             to=72,
             textvariable=ui_font_size_var,
             width=6,
-            font=_font,
         ),
     )
 
-    ui_padding_var = IntVar(value=get_env_from_schema("UI_PADDING"))
-    row = _add_param_row(
-        ui_frame,
-        row,
-        "config.ui.padding",
-        "config.ui.padding_desc",
-        ttk.Spinbox(
-            ui_frame,
-            from_=2,
-            to=30,
-            textvariable=ui_padding_var,
-            width=6,
-            font=_font,
-        ),
-    )
-
-    ui_btn_width_var = IntVar(value=get_env_from_schema("UI_BUTTON_WIDTH"))
-    row = _add_param_row(
-        ui_frame,
-        row,
-        "config.ui.btn_width",
-        "config.ui.btn_width_desc",
-        ttk.Spinbox(
-            ui_frame,
-            from_=5,
-            to=50,
-            textvariable=ui_btn_width_var,
-            width=6,
-            font=_font,
-        ),
-    )
-
-    ui_btn_width_wide_var = IntVar(value=get_env_from_schema("UI_BUTTON_WIDTH_WIDE"))
-    row = _add_param_row(
-        ui_frame,
-        row,
-        "config.ui.btn_width_wide",
-        "config.ui.btn_width_wide_desc",
-        ttk.Spinbox(
-            ui_frame,
-            from_=10,
-            to=50,
-            textvariable=ui_btn_width_wide_var,
-            width=6,
-            font=_font,
-        ),
-    )
-
-    notebook.add(ui_frame, text=t("config.tab_ui"))
+    notebook.add(gen_frame, text=t("config.tab_general"))
 
     def save() -> None:
-        values = get_current_env_values()
-        values["LANGUAGE"] = lang_var.get().strip() or "es"
-        values["FILE_OUTPUT_DIR"] = out_var.get().strip() or "output"
-        values["SAVE_AUDIO"] = "true" if save_audio_var.get() else "false"
-        values["LOG_CONSOLE"] = "true" if log_console_var.get() else "false"
-        values["RECORD_DURATION_SEC"] = _bounded_int_value(
-            dur_var,
-            minimum=5,
-            maximum=60,
-            default=10,
-        )
-        values["LOG_LEVEL"] = log_var.get().strip().upper() or "INFO"
-
-        values["UI_BACKGROUND"] = ui_bg_var.get().strip() or "#10161B"
-        values["UI_FOREGROUND"] = ui_fg_var.get().strip() or "#F2F5F7"
-        values["UI_BUTTON_BG"] = ui_btn_bg_var.get().strip() or "#1E2D38"
-        values["UI_BUTTON_FG"] = ui_btn_fg_var.get().strip() or "#F5F7FA"
-        values["UI_BUTTON_FG_CANCEL"] = ui_btn_cancel_var.get().strip() or "#FFF1F2"
-        values["UI_BUTTON_FG_ACCENT2"] = ui_btn_accent_var.get().strip() or "#FFF4D6"
-        values["UI_FONT_FAMILY"] = ui_font_family_var.get().strip() or "Bahnschrift"
-        values["UI_FONT_SIZE"] = _bounded_int_value(
-            ui_font_size_var,
-            minimum=8,
-            maximum=72,
-            default=16,
-        )
-        values["UI_PADDING"] = _bounded_int_value(ui_padding_var, minimum=2, maximum=30, default=6)
-        values["UI_BUTTON_WIDTH"] = _bounded_int_value(
-            ui_btn_width_var,
-            minimum=5,
-            maximum=50,
-            default=12,
-        )
-        values["UI_BUTTON_WIDTH_WIDE"] = _bounded_int_value(
-            ui_btn_width_wide_var,
-            minimum=10,
-            maximum=50,
-            default=20,
+        values = build_config_values_to_save(
+            get_current_env_values(),
+            language=lang_var.get(),
+            output_dir=out_var.get(),
+            save_audio=save_audio_var.get(),
+            record_duration_sec=dur_var,
+            log_level=log_var.get(),
+            log_console=log_console_var.get(),
+            ui_theme_mode=theme_mode_by_label.get(
+                ui_theme_mode_var.get().strip(),
+                str(get_env_from_schema("UI_THEME_MODE")),
+            ),
+            ui_font_size=ui_font_size_var,
         )
 
         env_path = Path(__file__).resolve().parent.parent.parent.parent / ".env"

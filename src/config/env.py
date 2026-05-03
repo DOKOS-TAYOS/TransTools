@@ -1,5 +1,7 @@
 """Environment variable loading and .env schema for TransTools."""
 
+from __future__ import annotations
+
 import os
 from pathlib import Path
 from typing import Any, Type, Union
@@ -75,13 +77,7 @@ def _validate_env_value(
     if cast_type is int:
         try:
             iv = int(value)
-            if key in (
-                "UI_PADDING",
-                "UI_BUTTON_WIDTH",
-                "UI_BUTTON_WIDTH_WIDE",
-                "UI_FONT_SIZE",
-                "RECORD_DURATION_SEC",
-            ):
+            if key in ("UI_FONT_SIZE", "RECORD_DURATION_SEC"):
                 if iv <= 0 or (key == "RECORD_DURATION_SEC" and iv > 300):
                     return False, default
         except (TypeError, ValueError, OverflowError):
@@ -99,17 +95,8 @@ def _validate_env_value(
 
 ENV_SCHEMA: list[dict[str, Any]] = [
     {"key": "LANGUAGE", "default": "es", "cast_type": str, "options": SUPPORTED_LANGUAGE_CODES},
-    {"key": "UI_BACKGROUND", "default": "#10161B", "cast_type": str},
-    {"key": "UI_FOREGROUND", "default": "#F2F5F7", "cast_type": str},
-    {"key": "UI_BUTTON_BG", "default": "#1E2D38", "cast_type": str},
-    {"key": "UI_BUTTON_WIDTH", "default": 12, "cast_type": int},
-    {"key": "UI_BUTTON_WIDTH_WIDE", "default": 20, "cast_type": int},
-    {"key": "UI_BUTTON_FG", "default": "#F5F7FA", "cast_type": str},
-    {"key": "UI_BUTTON_FG_CANCEL", "default": "#FFF1F2", "cast_type": str},
-    {"key": "UI_BUTTON_FG_ACCENT2", "default": "#FFF4D6", "cast_type": str},
+    {"key": "UI_THEME_MODE", "default": "dark", "cast_type": str, "options": ("dark", "light")},
     {"key": "UI_FONT_SIZE", "default": 16, "cast_type": int},
-    {"key": "UI_FONT_FAMILY", "default": "Bahnschrift", "cast_type": str},
-    {"key": "UI_PADDING", "default": 6, "cast_type": int},
     {"key": "FILE_OUTPUT_DIR", "default": "output", "cast_type": str},
     {"key": "SAVE_AUDIO", "default": True, "cast_type": bool},
     {"key": "RECORD_DURATION_SEC", "default": 10, "cast_type": int},

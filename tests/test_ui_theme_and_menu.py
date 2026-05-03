@@ -3,7 +3,16 @@
 from __future__ import annotations
 
 import i18n
-from config.theme import ThemeSizing, ThemeSurfacePalette, build_surface_palette, build_theme_sizing
+from config.theme import (
+    UI_STYLE,
+    ThemePreset,
+    ThemeSizing,
+    ThemeSurfacePalette,
+    build_surface_palette,
+    build_theme_sizing,
+    get_theme_preset,
+    refresh_theme,
+)
 from frontend.ui_main_menu import build_menu_sections, get_summary_toggle_label
 from frontend.window_utils import expand_window_size_to_requested_layout, fit_window_size_to_screen
 
@@ -24,24 +33,48 @@ class _FakeRequestedWindow:
         return self._req_height
 
 
+def test_get_theme_preset_returns_dark_mode_by_name() -> None:
+    """Dark mode should remain a first-class fixed preset."""
+    preset = get_theme_preset("dark")
+
+    assert isinstance(preset, ThemePreset)
+    assert preset.mode == "dark"
+    assert preset.bg == "#10161B"
+    assert preset.fg == "#F2F5F7"
+    assert preset.button_bg == "#1E2D38"
+
+
+def test_get_theme_preset_returns_light_mode_by_name() -> None:
+    """Light mode should expose a distinct fixed preset for the whole UI."""
+    preset = get_theme_preset("light")
+
+    assert isinstance(preset, ThemePreset)
+    assert preset.mode == "light"
+    assert preset.bg == "#F5F7FA"
+    assert preset.fg == "#16202A"
+    assert preset.button_bg == "#DCE5EC"
+    assert preset.chart_line == "#2E6F91"
+    assert preset.calendar_activity_bg == "#D7EAF7"
+
+
 def test_build_surface_palette_uses_non_white_surface_colors() -> None:
-    """Interactive surfaces should stay aligned with the dark theme."""
-    palette = build_surface_palette(bg="#181818", btn_bg="#1F1F1F")
+    """Interactive surfaces should stay aligned with the active theme surfaces."""
+    palette = build_surface_palette(bg="#10161B", btn_bg="#1E2D38", fg="#F2F5F7")
 
     assert isinstance(palette, ThemeSurfacePalette)
-    assert palette.entry_bg == "#141414"
-    assert palette.panel_bg == "#252525"
-    assert palette.panel_alt_bg == "#333333"
-    assert palette.hero_bg == "#20363f"
-    assert palette.muted_fg == "#999999"
+    assert palette.entry_bg == "#0d1216"
+    assert palette.panel_bg == "#1e2328"
+    assert palette.panel_alt_bg == "#2c3136"
+    assert palette.hero_bg == "#1a3441"
+    assert palette.muted_fg == "#b2b6b9"
     assert palette.tree_bg == palette.entry_bg
     assert palette.listbox_bg == palette.entry_bg
-    assert palette.tree_selected_bg == "#1F1F1F"
+    assert palette.tree_selected_bg == "#1E2D38"
 
 
-def test_build_theme_sizing_prefers_compact_defaults_for_dense_windows() -> None:
-    """Shared sizing should stay readable without crowding dense dialogs."""
-    sizing = build_theme_sizing(font_size=16, padding=6)
+def test_build_theme_sizing_derives_compact_defaults_from_font_size() -> None:
+    """Shared sizing should be derived from the general font size only."""
+    sizing = build_theme_sizing(font_size=16)
 
     assert isinstance(sizing, ThemeSizing)
     assert sizing.button_padding == (6, 4)
@@ -49,6 +82,34 @@ def test_build_theme_sizing_prefers_compact_defaults_for_dense_windows() -> None
     assert sizing.notebook_tab_padding == (10, 5)
     assert sizing.tree_rowheight == 26
     assert sizing.spinbox_arrowsize == 19
+
+
+def test_build_theme_sizing_scales_up_with_larger_fonts() -> None:
+    """The derived metrics should grow when the user increases the base font size."""
+    sizing = build_theme_sizing(font_size=24)
+
+    assert sizing.button_padding == (9, 7)
+    assert sizing.summary_button_padding == (9, 6)
+    assert sizing.notebook_tab_padding == (13, 8)
+    assert sizing.tree_rowheight == 37
+    assert sizing.spinbox_arrowsize == 30
+
+
+def test_refresh_theme_ignores_legacy_font_family_env(monkeypatch) -> None:
+    """Theme refresh should resolve a system font instead of honoring removed env settings."""
+    monkeypatch.setenv("UI_THEME_MODE", "light")
+    monkeypatch.setenv("UI_FONT_SIZE", "18")
+    monkeypatch.setenv("UI_FONT_FAMILY", "Imaginary Font")
+
+    refresh_theme()
+
+    assert UI_STYLE["theme_mode"] == "light"
+    assert UI_STYLE["font_size"] == 18
+    assert isinstance(UI_STYLE["font_family"], str)
+    assert UI_STYLE["font_family"]
+    assert UI_STYLE["font_family"] != "Imaginary Font"
+    assert UI_STYLE["chart_line"] == "#2E6F91"
+    assert UI_STYLE["calendar_activity_bg"] == "#D7EAF7"
 
 
 def test_fit_window_size_to_screen_clamps_oversized_dialogs() -> None:

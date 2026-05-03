@@ -170,7 +170,12 @@ def show_data_view_dialog(parent, app_service=None) -> None:
         ax.set_axis_off()
     else:
         weekly = weekly.sort_values("week_start")
-        ax.plot(weekly["week_start"], weekly["pitch_mean_hz"], marker="o", color="#2c5f7a")
+        ax.plot(
+            weekly["week_start"],
+            weekly["pitch_mean_hz"],
+            marker="o",
+            color=str(UI_STYLE["chart_line"]),
+        )
         ax.set_xlabel(t("data.week_start"))
         ax.set_ylabel(t("data.pitch_weekly"))
         ax.set_title(t("data.weekly_chart_title"))
@@ -459,7 +464,11 @@ def _build_calendar_tab(parent, app_service) -> None:
             tag_name = "activity"
             labels = [activity_label.get(kind) or kind for kind in sorted(kinds)]
             cal.calevent_create(parsed, ", ".join(labels), tag_name)
-            cal.tag_config(tag_name, background="#d8ecf8", foreground="#0f3a56")
+            cal.tag_config(
+                tag_name,
+                background=str(UI_STYLE["calendar_activity_bg"]),
+                foreground=str(UI_STYLE["calendar_activity_fg"]),
+            )
 
         def _on_pick(_event=None) -> None:
             selected_day = cal.selection_get()
