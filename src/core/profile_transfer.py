@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Literal, TypeAlias
 from uuid import uuid4
 
-from config.paths import get_output_dir
+from config.paths import get_legacy_output_dir, get_output_dir
 from core.privacy import VoicePrivacyService
 from utils import DataStoreError, get_logger
 
@@ -103,21 +103,31 @@ def import_user_profile(import_dir: Path, target_dir: Path | None = None) -> Non
         raise DataStoreError(f"No se pudo importar el perfil: {exc}") from exc
 
 
-def delete_user_profile(target_dir: Path | None = None) -> None:
+def delete_user_profile(
+    target_dir: Path | None = None,
+    legacy_dir: Path | None = None,
+) -> None:
     """Delete all managed local user-profile files and directories.
 
     Args:
         target_dir: Optional local destination directory for tests.
+        legacy_dir: Optional legacy project-local data directory for tests.
 
     Raises:
         DataStoreError: If any managed path cannot be removed.
     """
     destination = (target_dir or get_output_dir()).expanduser().resolve()
+    legacy_destination = (legacy_dir or get_legacy_output_dir()).expanduser().resolve()
+    roots = [destination]
+    if legacy_destination != destination:
+        roots.append(legacy_destination)
+
     try:
-        for file_name in _REQUIRED_PROFILE_FILES:
-            (destination / file_name).unlink(missing_ok=True)
-        for dir_name in _OPTIONAL_PROFILE_DIRS:
-            shutil.rmtree(destination / dir_name, ignore_errors=True)
+        for root in roots:
+            for file_name in _REQUIRED_PROFILE_FILES:
+                (root / file_name).unlink(missing_ok=True)
+            for dir_name in _OPTIONAL_PROFILE_DIRS:
+                shutil.rmtree(root / dir_name, ignore_errors=True)
     except Exception as exc:
         logger.exception("Profile deletion failed: %s", exc)
         raise DataStoreError(f"No se pudo borrar el perfil: {exc}") from exc

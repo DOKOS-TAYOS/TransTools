@@ -221,3 +221,43 @@ def test_delete_user_profile_removes_profile_history_key_and_audio() -> None:
         assert not (target_dir / "audio").exists()
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+def test_delete_user_profile_also_removes_legacy_copy_that_would_be_remigrated(
+    monkeypatch,
+) -> None:
+    """Deleting the profile should also clear legacy managed files to avoid auto-restore."""
+    temp_dir = _make_workspace_temp_dir()
+    try:
+        target_dir = temp_dir / "current"
+        legacy_dir = temp_dir / "legacy-output"
+        _write_text(target_dir / "patient_profile.json", '{"name":"Current"}')
+        _write_text(target_dir / "patient_history.json", '{"records":["current-day"]}')
+        _write_text(target_dir / ".voice_metrics.key", "current-key")
+        _write_text(target_dir / "audio" / "current.wav", "current-audio")
+
+        _write_text(legacy_dir / "patient_profile.json", '{"name":"Legacy"}')
+        _write_text(legacy_dir / "patient_history.json", '{"records":["legacy-day"]}')
+        _write_text(legacy_dir / ".voice_metrics.key", "legacy-key")
+        _write_text(legacy_dir / "audio" / "legacy.wav", "legacy-audio")
+
+        monkeypatch.setattr(profile_transfer, "get_output_dir", lambda: target_dir)
+        monkeypatch.setattr(
+            profile_transfer,
+            "get_legacy_output_dir",
+            lambda: legacy_dir,
+            raising=False,
+        )
+
+        delete_user_profile()
+
+        assert not (target_dir / "patient_profile.json").exists()
+        assert not (target_dir / "patient_history.json").exists()
+        assert not (target_dir / ".voice_metrics.key").exists()
+        assert not (target_dir / "audio").exists()
+        assert not (legacy_dir / "patient_profile.json").exists()
+        assert not (legacy_dir / "patient_history.json").exists()
+        assert not (legacy_dir / ".voice_metrics.key").exists()
+        assert not (legacy_dir / "audio").exists()
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)

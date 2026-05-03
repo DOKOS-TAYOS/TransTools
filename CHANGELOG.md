@@ -54,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Full profile deletion now also removes any legacy project-local profile copy in `output/`, preventing old data from being auto-migrated back after restart and making the reset behave like a true fresh start.
 - Button copy and feedback are now more explicit in key dialogs: onboarding now uses a clearer `Cancelar y salir` action, configuration checkboxes explain their exact effect next to the toggle, and companion actions that require a selected row now tell the user what to select instead of failing silently.
 - Profile import now validates exported JSON and the local voice-metrics key before replacing local data, so corrupt bundles fail fast instead of only breaking after restart.
 - Profile import now stages and rolls back managed files/directories when a replacement fails, preventing mixed old/new local state after partial import errors.
