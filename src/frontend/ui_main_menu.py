@@ -344,8 +344,8 @@ def create_main_menu(
             section_card.grid_configure(padx=(pad // 2, 0))
 
     ttk.Frame(main_frame, style="App.TFrame", height=6).grid(column=0, row=4, columnspan=2)
-    menu.minsize(900, 620)
-    place_window_centered(menu, width=980, height=760)
+    menu.minsize(900, 660)
+    place_window_centered(menu, width=980, height=820)
     return menu
 
 

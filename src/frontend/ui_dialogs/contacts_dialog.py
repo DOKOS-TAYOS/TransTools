@@ -13,7 +13,12 @@ from config import UI_STYLE
 from config.theme import get_surface_palette, prepare_ttk_window
 from core.context import get_app_service
 from core.service import AppService
-from frontend.window_utils import TreeColumnSpec, apply_tree_column_specs, place_window_centered
+from frontend.window_utils import (
+    TreeColumnSpec,
+    apply_tree_column_specs,
+    get_scroll_friendly_window_height,
+    place_window_centered,
+)
 from i18n import t
 
 CONTACT_DESCRIPTION_WRAP_WIDTH = 36
@@ -21,6 +26,7 @@ CONTACT_MIN_DESCRIPTION_LINES = 4
 CONTACT_ROW_LINE_HEIGHT_EXTRA = 8
 CONTACT_ROW_VERTICAL_PADDING = 10
 CONTACT_MIN_ROWHEIGHT = 80
+CONTACTS_DIALOG_HEIGHT = get_scroll_friendly_window_height(700)
 
 
 def _wrap_description(
@@ -150,7 +156,7 @@ def show_contacts_dialog(parent: Tk | Toplevel, app_service: AppService | None =
     ttk.Button(dlg, text=t("menu.close"), command=dlg.destroy, style="Utility.TButton").pack(pady=8)
     dlg.transient(parent)
     dlg.minsize(1200, 540)
-    place_window_centered(dlg, width=1440, height=700)
+    place_window_centered(dlg, width=1440, height=CONTACTS_DIALOG_HEIGHT)
 
 
 def _create_contact_tree(parent: Any, rows: list[dict[str, str]]) -> ttk.Treeview:

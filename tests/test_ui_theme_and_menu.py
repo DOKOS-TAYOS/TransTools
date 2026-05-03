@@ -20,8 +20,14 @@ from config.theme import (
     get_theme_preset,
     refresh_theme,
 )
+from frontend.ui_dialogs.section_widgets import _build_section_toggle_text
 from frontend.ui_main_menu import build_menu_sections, get_summary_toggle_label
-from frontend.window_utils import expand_window_size_to_requested_layout, fit_window_size_to_screen
+from frontend.window_utils import (
+    expand_window_size_to_requested_layout,
+    fit_window_size_to_screen,
+    get_scroll_friendly_screen_height_cap,
+    get_scroll_friendly_window_height,
+)
 
 
 class _FakeRequestedWindow:
@@ -184,6 +190,19 @@ def test_expand_window_size_to_requested_layout_preserves_footer_space() -> None
     assert expand_window_size_to_requested_layout(window, 760, 617) == (760, 621)
 
 
+def test_get_scroll_friendly_window_height_adds_five_percent_headroom() -> None:
+    """Scrollable primary windows should gain a small amount of extra height."""
+    assert get_scroll_friendly_window_height(700) == 735
+    assert get_scroll_friendly_window_height(840) == 882
+    assert get_scroll_friendly_window_height(860) == 903
+
+
+def test_get_scroll_friendly_screen_height_cap_uses_larger_fraction() -> None:
+    """The configuration dialog can use a slightly taller slice of the screen."""
+    assert get_scroll_friendly_screen_height_cap(800) == 588
+    assert get_scroll_friendly_screen_height_cap(1080) == 793
+
+
 def test_get_summary_toggle_label_closed_state_uses_expand_copy(
     monkeypatch,
 ) -> None:
@@ -209,6 +228,14 @@ def test_main_menu_keeps_summary_toggle_inline_with_title() -> None:
     assert 'summary_toggle_btn.grid(column=1, row=0, sticky="e")' in source
 
 
+def test_main_menu_uses_taller_default_window_size() -> None:
+    """The main menu should start tall enough to avoid immediate vertical scrolling."""
+    source = Path("src/frontend/ui_main_menu.py").read_text(encoding="utf-8")
+
+    assert "menu.minsize(900, 660)" in source
+    assert "place_window_centered(menu, width=980, height=820)" in source
+
+
 def test_main_menu_hero_uses_panel_border_for_consistent_dark_chrome() -> None:
     """The hero block should use the calmer shared panel border, not a brighter outline."""
     source = Path("src/frontend/ui_main_menu.py").read_text(encoding="utf-8")
@@ -222,6 +249,41 @@ def test_collapsible_section_headers_use_visible_dark_mode_borders() -> None:
 
     assert "highlightbackground=palette.panel_border" in source
     assert "highlightthickness=1" in source
+
+
+def test_collapsible_section_headers_use_unicode_chevrons() -> None:
+    """Reusable collapsible sections should use cleaner chevrons than plain > / v text."""
+    source = Path("src/frontend/ui_dialogs/section_widgets.py").read_text(encoding="utf-8")
+
+    assert 'SECTION_COLLAPSED_CHEVRON = "\\u25b8"' in source
+    assert 'SECTION_EXPANDED_CHEVRON = "\\u25be"' in source
+    assert _build_section_toggle_text("Titulo", is_expanded=False) == "\u25b8  Titulo"
+    assert _build_section_toggle_text("Titulo", is_expanded=True) == "\u25be  Titulo"
+
+
+def test_scrollable_primary_dialogs_use_shared_height_headroom_helper() -> None:
+    """Most large dialogs with active vertical scrolling should use the shared +5% helper."""
+    companion_source = Path("src/frontend/ui_dialogs/companion_dialog.py").read_text(
+        encoding="utf-8"
+    )
+    contacts_source = Path("src/frontend/ui_dialogs/contacts_dialog.py").read_text(encoding="utf-8")
+
+    assert "get_scroll_friendly_window_height" in companion_source
+    assert "get_scroll_friendly_window_height" in contacts_source
+
+
+def test_data_view_dialog_uses_a_slightly_shorter_height_override() -> None:
+    """The data-view window should be slightly shorter than the other scroll-friendly dialogs."""
+    source = Path("src/frontend/ui_dialogs/data_view_dialog.py").read_text(encoding="utf-8")
+
+    assert "DATA_VIEW_DIALOG_HEIGHT = 858" in source
+
+
+def test_config_dialog_uses_shared_scroll_friendly_screen_cap() -> None:
+    """Configuration sizing should use the shared taller cap for its scrolling canvas."""
+    source = Path("src/frontend/ui_dialogs/config_dialog.py").read_text(encoding="utf-8")
+
+    assert "get_scroll_friendly_screen_height_cap" in source
 
 
 def test_build_menu_sections_groups_actions_by_priority() -> None:

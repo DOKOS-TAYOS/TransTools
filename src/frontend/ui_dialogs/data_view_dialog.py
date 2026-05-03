@@ -31,6 +31,7 @@ from i18n import t
 from utils import DataStoreError, get_logger
 
 logger = get_logger(__name__)
+DATA_VIEW_DIALOG_HEIGHT = 858
 
 
 def get_process_tab_table_rows() -> dict[str, int]:
@@ -110,7 +111,7 @@ def show_data_view_dialog(parent, app_service=None) -> None:
     dlg.configure(background=UI_STYLE["bg"])
     dlg.minsize(1100, 700)
     dlg.transient(parent)
-    place_window_centered(dlg, width=1280, height=860)
+    place_window_centered(dlg, width=1280, height=DATA_VIEW_DIALOG_HEIGHT)
 
     fig: Figure | None = None
     canvas = None
@@ -188,7 +189,7 @@ def show_data_view_dialog(parent, app_service=None) -> None:
 
     def _fix_geometry() -> None:
         dlg.update_idletasks()
-        place_window_centered(dlg, width=1280, height=860)
+        place_window_centered(dlg, width=1280, height=DATA_VIEW_DIALOG_HEIGHT)
 
     dlg.after(50, _fix_geometry)
 

@@ -15,7 +15,12 @@ from frontend.date_widgets import DateEntryAdapter, create_date_entry
 from frontend.input_widgets import create_combobox, create_entry, create_spinbox
 from frontend.text_widgets import configure_notes_widget
 from frontend.ui_dialogs.section_widgets import create_scrollable_content
-from frontend.window_utils import TreeColumnSpec, apply_tree_column_specs, place_window_centered
+from frontend.window_utils import (
+    TreeColumnSpec,
+    apply_tree_column_specs,
+    get_scroll_friendly_window_height,
+    place_window_centered,
+)
 from i18n import t
 from utils import DataStoreError
 
@@ -30,6 +35,7 @@ _ROADMAP_CATEGORIES = [
 ]
 _APPOINTMENT_TYPES = ["medical", "psychology", "general"]
 _WELLBEING_SOURCES = ["manual", "medication", "visit"]
+COMPANION_DIALOG_HEIGHT = get_scroll_friendly_window_height(840)
 
 
 @dataclass(frozen=True)
@@ -169,7 +175,7 @@ def show_companion_dialog(parent: Any, app_service: Any | None = None) -> None:
     ttk.Button(btn_frame, text=t("menu.close"), command=dlg.destroy).pack(side="right")
 
     _refresh_all()
-    place_window_centered(dlg, width=1280, height=840)
+    place_window_centered(dlg, width=1280, height=COMPANION_DIALOG_HEIGHT)
 
 
 def _build_dashboard_tab(

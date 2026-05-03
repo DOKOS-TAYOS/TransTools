@@ -23,7 +23,7 @@ from config.env import get_env_from_schema
 from config.theme import prepare_ttk_window
 from core.profile_transfer import delete_user_profile, export_user_profile, import_user_profile
 from frontend.input_widgets import create_combobox, create_entry, create_spinbox
-from frontend.window_utils import place_window_centered
+from frontend.window_utils import get_scroll_friendly_screen_height_cap, place_window_centered
 from i18n import t
 from utils import DataStoreError
 
@@ -468,7 +468,7 @@ def show_config_dialog(parent: Tk | Toplevel) -> bool:
     dlg.update_idletasks()
     req_w = inner_frame.winfo_reqwidth() + 30
     req_h = inner_frame.winfo_reqheight() + 100
-    max_h = int(dlg.winfo_screenheight() * 0.7)
+    max_h = get_scroll_friendly_screen_height_cap(dlg.winfo_screenheight())
     w = max(400, req_w)
     h = min(max(300, req_h), max_h)
     place_window_centered(dlg, width=w, height=h)

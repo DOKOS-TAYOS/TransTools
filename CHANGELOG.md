@@ -32,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Scroll-heavy primary windows now open slightly taller by default, and the main menu also starts a bit higher, giving the companion center, contacts directory, configuration dialog, and landing screen more vertical room so their scrollbars stay still more often on the current default UI size; the `Ver mis datos` window keeps a slightly shorter dedicated height to avoid feeling oversized.
+- Collapsible information sections now use cleaner chevron icons for their open/closed state instead of plain `>` / `v` text.
 - Night mode UI chrome now uses clearer shared surface separation and visible dark-mode borders across cards, buttons, inputs, tables, listboxes, collapsible headers, and the main menu hero so the interface no longer reads as one flat block in dark theme.
 - Windows and Linux installer/setup/run scripts now share a typed Python bootstrap flow that reuses `.venv` directly, validates the installation more clearly, offers `run --check`, and gives more actionable recovery messages when setup or launch fails.
 - Sphinx landing docs now reflect the current installation flow more clearly, including `.venv` reuse, one-step install scripts, and the `run --check` validation mode.

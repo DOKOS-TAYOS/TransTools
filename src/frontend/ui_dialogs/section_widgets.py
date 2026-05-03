@@ -9,6 +9,9 @@ from typing import Any
 from config import UI_STYLE
 from config.theme import get_surface_palette
 
+SECTION_COLLAPSED_CHEVRON = "\u25b8"
+SECTION_EXPANDED_CHEVRON = "\u25be"
+
 
 def _is_widget_descendant(widget: Any | None, ancestor: object) -> bool:
     """Return whether a widget belongs to the given ancestor tree."""
@@ -58,6 +61,12 @@ def install_vertical_mousewheel_scrolling(
         bind_root.bind_all(sequence, _on_mousewheel, add="+")
 
 
+def _build_section_toggle_text(title: str, is_expanded: bool) -> str:
+    """Return the chevron + title text used by collapsible section headers."""
+    chevron = SECTION_EXPANDED_CHEVRON if is_expanded else SECTION_COLLAPSED_CHEVRON
+    return f"{chevron}  {title}"
+
+
 def create_collapsible_section(
     parent: ttk.Frame,
     title: str,
@@ -81,7 +90,7 @@ def create_collapsible_section(
 
     toggle_label = Label(
         header_frame,
-        text=f"v  {title}" if initially_expanded else f">  {title}",
+        text=_build_section_toggle_text(title, initially_expanded),
         cursor="hand2",
         bg=palette.section_header_bg,
         fg=palette.section_header_fg,
@@ -118,10 +127,10 @@ def create_collapsible_section(
     def _toggle() -> None:
         if content_frame.winfo_ismapped():
             content_frame.pack_forget()
-            toggle_label.config(text=f">  {title}")
+            toggle_label.config(text=_build_section_toggle_text(title, is_expanded=False))
         else:
             content_frame.pack(fill="x")
-            toggle_label.config(text=f"v  {title}")
+            toggle_label.config(text=_build_section_toggle_text(title, is_expanded=True))
 
     toggle_label.bind("<Button-1>", lambda _e: _toggle())
     header_frame.bind("<Button-1>", lambda _e: _toggle())

@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from math import ceil, floor
 from tkinter import Tk, Toplevel, ttk
 from typing import Literal, Protocol
 
 VERTICAL_CENTER_BIAS = 18
 WINDOW_SCREEN_MARGIN = 40
 WINDOW_SCREEN_VERTICAL_MARGIN = 72
+SCROLL_FRIENDLY_HEIGHT_SCALE = 1.05
+SCROLL_FRIENDLY_SCREEN_HEIGHT_FRACTION = 0.735
 
 
 class SupportsRequestedWindowSize(Protocol):
@@ -77,6 +80,18 @@ def expand_window_size_to_requested_layout(
         max(int(width), int(window.winfo_reqwidth())),
         max(int(height), int(window.winfo_reqheight())),
     )
+
+
+def get_scroll_friendly_window_height(height: int) -> int:
+    """Return a slightly taller height for large windows with active vertical scrolling."""
+    normalized_height = max(200, int(height))
+    return max(normalized_height, ceil(normalized_height * SCROLL_FRIENDLY_HEIGHT_SCALE))
+
+
+def get_scroll_friendly_screen_height_cap(screen_height: int) -> int:
+    """Return a modestly taller screen-height cap for scrollable dialogs."""
+    normalized_screen_height = max(300, int(screen_height))
+    return max(300, floor(normalized_screen_height * SCROLL_FRIENDLY_SCREEN_HEIGHT_FRACTION))
 
 
 def apply_tree_column_specs(tree: ttk.Treeview, specs: Sequence[TreeColumnSpec]) -> None:
