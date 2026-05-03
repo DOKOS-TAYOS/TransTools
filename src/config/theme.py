@@ -155,31 +155,60 @@ def _is_light_hex_color(hex_color: str) -> bool:
 def build_surface_palette(bg: str, btn_bg: str, fg: str | None = None) -> ThemeSurfacePalette:
     """Build a richer dark palette for ttk widgets and information panels."""
     resolved_fg = fg if fg is not None else "#cccccc"
+    if _is_light_hex_color(bg):
+        entry_bg = _adjust_hex_brightness(bg, 0.85)
+        entry_hover = _blend_hex_colors(entry_bg, "#ffffff", 0.12)
+        panel_bg = _blend_hex_colors(bg, "#ffffff", 0.06)
+        panel_alt_bg = _blend_hex_colors(bg, "#ffffff", 0.12)
+        panel_raised_bg = _blend_hex_colors(btn_bg, "#ffffff", 0.10)
+        panel_border = (
+            _blend_hex_colors(bg, resolved_fg, 0.44)
+            if _is_hex_color(resolved_fg)
+            else _blend_hex_colors(bg, "#000000", 0.26)
+        )
+        panel_highlight = _blend_hex_colors(btn_bg, "#6eb1c8", 0.34)
+        hero_bg = _blend_hex_colors(bg, "#3890b4", 0.25)
+        hero_fg = resolved_fg
+        hero_muted_fg = _blend_hex_colors(resolved_fg, bg, 0.18)
+        muted_fg = _blend_hex_colors(resolved_fg, bg, 0.28)
+        subtle_fg = _blend_hex_colors(resolved_fg, bg, 0.42)
 
-    entry_bg = _adjust_hex_brightness(bg, 0.85)
-    entry_hover = _blend_hex_colors(entry_bg, "#ffffff", 0.12)
-    panel_bg = _blend_hex_colors(bg, "#ffffff", 0.06)
-    panel_alt_bg = _blend_hex_colors(bg, "#ffffff", 0.12)
-    panel_raised_bg = _blend_hex_colors(btn_bg, "#ffffff", 0.10)
-    if _is_light_hex_color(bg) and _is_hex_color(resolved_fg):
-        panel_border = _blend_hex_colors(bg, resolved_fg, 0.44)
+        check_bg = _blend_hex_colors(bg, "#ffffff", 0.12)
+        check_hover = _blend_hex_colors(bg, "#ffffff", 0.18)
+        check_active = panel_highlight
+        check_disabled = _blend_hex_colors(bg, "#ffffff", 0.08)
+
+        tab_bg = panel_bg
+        tab_active_bg = panel_alt_bg
+        tree_heading_bg = panel_alt_bg
+        tree_selected_bg = btn_bg
+        section_header_bg = _blend_hex_colors(bg, "#2f6e88", 0.28)
+        section_header_fg = hero_fg
     else:
-        panel_border = _blend_hex_colors(bg, "#ffffff", 0.20)
-    panel_highlight = _blend_hex_colors(btn_bg, "#6eb1c8", 0.34)
-    hero_bg = _blend_hex_colors(bg, "#3890b4", 0.25)
-    hero_fg = resolved_fg
-    hero_muted_fg = _blend_hex_colors(resolved_fg, bg, 0.18)
-    muted_fg = _blend_hex_colors(resolved_fg, bg, 0.28)
-    subtle_fg = _blend_hex_colors(resolved_fg, bg, 0.42)
+        entry_bg = _blend_hex_colors(bg, "#ffffff", 0.03)
+        entry_hover = _blend_hex_colors(entry_bg, "#ffffff", 0.08)
+        panel_bg = _blend_hex_colors(bg, "#ffffff", 0.08)
+        panel_alt_bg = _blend_hex_colors(bg, "#ffffff", 0.14)
+        panel_raised_bg = _blend_hex_colors(btn_bg, "#ffffff", 0.14)
+        panel_border = _blend_hex_colors(bg, "#9ab6c7", 0.30)
+        panel_highlight = _blend_hex_colors(btn_bg, "#8fd4ef", 0.34)
+        hero_bg = _blend_hex_colors(bg, "#2f7fa0", 0.22)
+        hero_fg = resolved_fg
+        hero_muted_fg = _blend_hex_colors(resolved_fg, hero_bg, 0.24)
+        muted_fg = _blend_hex_colors(resolved_fg, panel_bg, 0.24)
+        subtle_fg = _blend_hex_colors(resolved_fg, panel_bg, 0.42)
 
-    check_bg = _blend_hex_colors(bg, "#ffffff", 0.12)
-    check_hover = _blend_hex_colors(bg, "#ffffff", 0.18)
-    check_active = panel_highlight
-    check_disabled = _blend_hex_colors(bg, "#ffffff", 0.08)
+        check_bg = _blend_hex_colors(bg, "#ffffff", 0.10)
+        check_hover = _blend_hex_colors(bg, "#ffffff", 0.15)
+        check_active = panel_highlight
+        check_disabled = _blend_hex_colors(bg, "#ffffff", 0.06)
 
-    tab_bg = panel_bg
-    tab_active_bg = panel_alt_bg
-    tree_heading_bg = panel_alt_bg
+        tab_bg = panel_bg
+        tab_active_bg = panel_alt_bg
+        tree_heading_bg = panel_raised_bg
+        tree_selected_bg = _blend_hex_colors(btn_bg, "#8fd4ef", 0.18)
+        section_header_bg = _blend_hex_colors(bg, "#2f6e88", 0.22)
+        section_header_fg = hero_fg
 
     return ThemeSurfacePalette(
         entry_bg=entry_bg,
@@ -202,15 +231,15 @@ def build_surface_palette(bg: str, btn_bg: str, fg: str | None = None) -> ThemeS
         tab_active_bg=tab_active_bg,
         tree_bg=entry_bg,
         tree_heading_bg=tree_heading_bg,
-        tree_selected_bg=btn_bg,
+        tree_selected_bg=tree_selected_bg,
         listbox_bg=entry_bg,
-        listbox_select_bg=btn_bg,
+        listbox_select_bg=tree_selected_bg,
         listbox_border=panel_border,
         status_info_bg=_blend_hex_colors(bg, "#23566f", 0.34),
         status_warn_bg=_blend_hex_colors(bg, "#7b5a1e", 0.34),
         status_danger_bg=_blend_hex_colors(bg, "#7f2434", 0.34),
-        section_header_bg=_blend_hex_colors(bg, "#2f6e88", 0.28),
-        section_header_fg=hero_fg,
+        section_header_bg=section_header_bg,
+        section_header_fg=section_header_fg,
     )
 
 
@@ -266,10 +295,10 @@ def build_theme_chrome(mode: str) -> ThemeChrome:
         )
 
     return ThemeChrome(
-        card_borderwidth=0,
-        card_relief="flat",
+        card_borderwidth=1,
+        card_relief="solid",
         button_borderwidth=1,
-        button_relief="flat",
+        button_relief="solid",
     )
 
 
@@ -496,10 +525,10 @@ def configure_ttk_styles(root: Misc) -> None:
     _configure_button_style(
         style,
         "MenuCard.TButton",
-        background=palette.panel_alt_bg,
+        background=palette.panel_raised_bg,
         foreground=fg,
-        hover_background=_blend_hex_colors(palette.panel_alt_bg, "#ffffff", 0.10),
-        pressed_background=palette.panel_bg,
+        hover_background=_blend_hex_colors(palette.panel_raised_bg, "#ffffff", 0.08),
+        pressed_background=palette.panel_alt_bg,
         font=font,
         padding=(sizing.button_padding[0] + 1, sizing.button_padding[1]),
         border_color=palette.panel_border,
@@ -509,9 +538,9 @@ def configure_ttk_styles(root: Misc) -> None:
     _configure_button_style(
         style,
         "Utility.TButton",
-        background=palette.panel_bg,
+        background=palette.panel_alt_bg,
         foreground=fg,
-        hover_background=palette.panel_alt_bg,
+        hover_background=palette.panel_raised_bg,
         pressed_background=btn_pressed,
         font=font,
         padding=sizing.button_padding,
@@ -548,9 +577,9 @@ def configure_ttk_styles(root: Misc) -> None:
     _configure_button_style(
         style,
         "SummaryToggle.TButton",
-        background=palette.panel_bg,
+        background=palette.panel_alt_bg,
         foreground=palette.muted_fg,
-        hover_background=palette.panel_alt_bg,
+        hover_background=palette.panel_raised_bg,
         pressed_background=palette.panel_bg,
         font=(str(UI_STYLE["font_family"]), max(8, int(UI_STYLE["font_size"]) - 3)),
         padding=sizing.summary_button_padding,
@@ -650,6 +679,9 @@ def configure_ttk_styles(root: Misc) -> None:
         rowheight=sizing.tree_rowheight,
         borderwidth=1,
         relief="solid",
+        bordercolor=palette.panel_border,
+        lightcolor=palette.panel_border,
+        darkcolor=palette.panel_border,
     )
     style.map(
         "Treeview",
@@ -661,8 +693,11 @@ def configure_ttk_styles(root: Misc) -> None:
         background=palette.tree_heading_bg,
         foreground=fg,
         font=font,
-        relief="raised",
+        relief="solid",
         borderwidth=1,
+        bordercolor=palette.panel_border,
+        lightcolor=palette.panel_border,
+        darkcolor=palette.panel_border,
     )
     style.map(
         "Treeview.Heading",
@@ -682,7 +717,10 @@ def configure_ttk_styles(root: Misc) -> None:
         foreground=palette.muted_fg,
         padding=sizing.notebook_tab_padding,
         font=font,
-        borderwidth=0,
+        borderwidth=1,
+        bordercolor=palette.panel_border,
+        lightcolor=palette.panel_border,
+        darkcolor=palette.panel_border,
     )
     style.map(
         "TNotebook.Tab",
@@ -695,6 +733,7 @@ def configure_ttk_styles(root: Misc) -> None:
         background=palette.panel_alt_bg,
         troughcolor=palette.panel_bg,
         arrowcolor=fg,
+        borderwidth=1,
         bordercolor=palette.panel_border,
         darkcolor=palette.panel_alt_bg,
         lightcolor=palette.panel_alt_bg,

@@ -261,8 +261,10 @@ def _fill_regional_contacts(parent: Any, regional: dict[str, list[dict[str, str]
         selectbackground=palette.listbox_select_bg,
         selectforeground=UI_STYLE["fg"],
         highlightbackground=palette.listbox_border,
-        highlightthickness=0,
-        relief="flat",
+        highlightcolor=palette.panel_highlight,
+        highlightthickness=1,
+        borderwidth=1,
+        relief="solid",
         font=(UI_STYLE["font_family"], UI_STYLE["font_size"]),
     )
     region_list.pack(fill="y", expand=True)

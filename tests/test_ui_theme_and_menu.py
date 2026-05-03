@@ -77,14 +77,26 @@ def test_build_surface_palette_uses_non_white_surface_colors() -> None:
     palette = build_surface_palette(bg="#10161B", btn_bg="#1E2D38", fg="#F2F5F7")
 
     assert isinstance(palette, ThemeSurfacePalette)
-    assert palette.entry_bg == "#0d1216"
-    assert palette.panel_bg == "#1e2328"
-    assert palette.panel_alt_bg == "#2c3136"
-    assert palette.hero_bg == "#1a3441"
-    assert palette.muted_fg == "#b2b6b9"
+    assert palette.entry_bg == "#171c21"
+    assert palette.panel_bg == "#23282d"
+    assert palette.panel_alt_bg == "#31363a"
+    assert palette.panel_raised_bg == "#3d4a53"
+    assert palette.panel_border == "#39464e"
+    assert palette.hero_bg == "#162d38"
+    assert palette.muted_fg == "#c0c3c6"
     assert palette.tree_bg == palette.entry_bg
     assert palette.listbox_bg == palette.entry_bg
-    assert palette.tree_selected_bg == "#1E2D38"
+    assert palette.tree_selected_bg == "#324b58"
+
+
+def test_build_surface_palette_dark_mode_keeps_buttons_distinct_from_cards() -> None:
+    """Dark mode cards, raised panels, and buttons should not collapse into one flat layer."""
+    palette = build_surface_palette(bg="#10161B", btn_bg="#1E2D38", fg="#F2F5F7")
+
+    assert palette.panel_alt_bg != "#1E2D38"
+    assert palette.panel_raised_bg != palette.panel_bg
+    assert palette.tree_heading_bg == palette.panel_raised_bg
+    assert palette.listbox_border == palette.panel_border
 
 
 def test_build_surface_palette_uses_dark_borders_in_light_mode() -> None:
@@ -98,6 +110,17 @@ def test_build_surface_palette_uses_dark_borders_in_light_mode() -> None:
 def test_build_theme_chrome_enables_visible_outlines_in_light_mode() -> None:
     """Light mode should outline cards and buttons instead of leaving them visually flat."""
     chrome = build_theme_chrome("light")
+
+    assert isinstance(chrome, ThemeChrome)
+    assert chrome.card_borderwidth == 1
+    assert chrome.card_relief == "solid"
+    assert chrome.button_borderwidth == 1
+    assert chrome.button_relief == "solid"
+
+
+def test_build_theme_chrome_enables_visible_outlines_in_dark_mode() -> None:
+    """Dark mode should also use visible outlines so cards do not visually merge together."""
+    chrome = build_theme_chrome("dark")
 
     assert isinstance(chrome, ThemeChrome)
     assert chrome.card_borderwidth == 1
@@ -184,6 +207,21 @@ def test_main_menu_keeps_summary_toggle_inline_with_title() -> None:
     source = Path("src/frontend/ui_main_menu.py").read_text(encoding="utf-8")
 
     assert 'summary_toggle_btn.grid(column=1, row=0, sticky="e")' in source
+
+
+def test_main_menu_hero_uses_panel_border_for_consistent_dark_chrome() -> None:
+    """The hero block should use the calmer shared panel border, not a brighter outline."""
+    source = Path("src/frontend/ui_main_menu.py").read_text(encoding="utf-8")
+
+    assert "highlightbackground=palette.panel_border" in source
+
+
+def test_collapsible_section_headers_use_visible_dark_mode_borders() -> None:
+    """Reusable collapsible section headers should expose the shared border in dark mode."""
+    source = Path("src/frontend/ui_dialogs/section_widgets.py").read_text(encoding="utf-8")
+
+    assert "highlightbackground=palette.panel_border" in source
+    assert "highlightthickness=1" in source
 
 
 def test_build_menu_sections_groups_actions_by_priority() -> None:

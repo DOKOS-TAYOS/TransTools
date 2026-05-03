@@ -213,7 +213,7 @@ def create_main_menu(
         main_frame,
         bg=palette.hero_bg,
         highlightthickness=1,
-        highlightbackground=palette.panel_highlight,
+        highlightbackground=palette.panel_border,
         padx=18,
         pady=16,
     )

@@ -73,7 +73,8 @@ def create_collapsible_section(
     header_frame = Frame(
         outer,
         bg=palette.section_header_bg,
-        highlightthickness=0,
+        highlightthickness=1,
+        highlightbackground=palette.panel_border,
         cursor="hand2",
     )
     header_frame.pack(fill="x", pady=(pad, 0))
