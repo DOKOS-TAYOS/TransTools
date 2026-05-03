@@ -43,7 +43,7 @@ transtools = "main:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-py-modules = ["main", "i18n"]
+py-modules = ["bootstrap_cli", "main", "i18n"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

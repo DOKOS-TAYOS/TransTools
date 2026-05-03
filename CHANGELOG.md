@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Windows and Linux installer/setup/run scripts now share a typed Python bootstrap flow that reuses `.venv` directly, validates the installation more clearly, offers `run --check`, and gives more actionable recovery messages when setup or launch fails.
 - Weekly voice trends are now hidden unless a week has voice samples on at least two distinct days, so single-day recordings do not produce weekly pitch analysis or exports.
   - Unified data view
   - Configuration

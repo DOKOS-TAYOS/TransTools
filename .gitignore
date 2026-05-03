@@ -28,6 +28,9 @@ dist/
 *.log
 logs/
 
+# Local git worktrees
+worktrees/
+
 # Output and generated data
 output/*
 

@@ -1,4 +1,5 @@
 @echo off
+setlocal
 REM ============================================================================
 REM TransTools - Quick Launch Script for Windows
 REM ============================================================================
@@ -6,21 +7,30 @@ REM ============================================================================
 REM Change to project root directory (parent of bin)
 cd /d "%~dp0.."
 
-REM Check if virtual environment exists
-if not exist .venv (
-    echo ERROR: Virtual environment not found
-    echo Please run setup.bat first
+if not exist ".venv\Scripts\python.exe" (
+    echo ERROR: Virtual environment not found.
+    echo Run setup.bat to finish the installation.
     pause
     exit /b 1
 )
 
-REM Activate virtual environment and run the program
-call .venv\Scripts\activate.bat
-pythonw src\main.py
-if errorlevel 1 (
-    echo ERROR: TransTools failed to start with pythonw.
-    echo Showing detailed error output...
-    python src\main.py
-    pause
-    exit /b 1
+if /I "%~1"=="--check" goto :console_mode
+if /I "%~1"=="--console" goto :console_mode
+
+.venv\Scripts\python.exe src\bootstrap_cli.py run --check >nul 2>&1
+if errorlevel 1 goto :console_mode
+
+if exist ".venv\Scripts\pythonw.exe" (
+    .venv\Scripts\pythonw.exe src\main.py %*
+    if not errorlevel 1 exit /b 0
+    echo ERROR: Windowed launch failed.
+    echo Retrying in console mode...
 )
+
+:console_mode
+.venv\Scripts\python.exe src\bootstrap_cli.py run --console %*
+set "EXIT_CODE=%ERRORLEVEL%"
+if not "%EXIT_CODE%"=="0" (
+    pause
+)
+exit /b %EXIT_CODE%

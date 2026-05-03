@@ -3,11 +3,10 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-if [ ! -d ".venv" ]; then
-  echo "ERROR: .venv not found. Run ./setup.sh first."
+if [ ! -x ".venv/bin/python" ]; then
+  echo "ERROR: .venv/bin/python was not found. Run ./setup.sh first."
   exit 1
 fi
 
-source .venv/bin/activate
-python src/main.py
+.venv/bin/python src/bootstrap_cli.py run "$@"
 

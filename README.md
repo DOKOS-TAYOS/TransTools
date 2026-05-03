@@ -199,8 +199,9 @@ bin\run.bat
 
 Notas:
 
-- `setup.bat` crea `.venv`, instala dependencias y prepara `.env`.
+- `setup.bat` crea o reutiliza `.venv`, instala dependencias y prepara `.env` sin depender de activar el entorno en la terminal.
 - En Windows tambien intenta crear un acceso directo en el escritorio.
+- `bin\run.bat --check` valida la instalacion sin abrir la app.
 - Si quieres un flujo de clonado + preparacion en un solo paso, tambien existe `install.bat`.
 
 #### Linux
@@ -212,6 +213,7 @@ chmod +x setup.sh bin/run.sh
 ```
 
 Tambien existe `install.sh` para un flujo de clonado + preparacion.
+Si solo quieres validar el entorno antes de abrir la app, usa `./bin/run.sh --check`.
 
 ### Opcion manual
 
