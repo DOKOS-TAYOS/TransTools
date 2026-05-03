@@ -167,7 +167,7 @@ def test_get_summary_toggle_label_closed_state_uses_expand_copy(
     """Collapsed summary should invite the user to open it."""
     monkeypatch.setattr(i18n, "_current_lang", "es")
 
-    assert get_summary_toggle_label(is_expanded=False) == "Mostrar resumen rápido"
+    assert get_summary_toggle_label(is_expanded=False) == "Mostrar"
 
 
 def test_get_summary_toggle_label_open_state_uses_collapse_copy(
@@ -176,7 +176,14 @@ def test_get_summary_toggle_label_open_state_uses_collapse_copy(
     """Expanded summary should offer a hide action."""
     monkeypatch.setattr(i18n, "_current_lang", "en")
 
-    assert get_summary_toggle_label(is_expanded=True) == "Hide quick summary"
+    assert get_summary_toggle_label(is_expanded=True) == "Hide"
+
+
+def test_main_menu_keeps_summary_toggle_inline_with_title() -> None:
+    """Quick summary toggle should stay on the same header row as the title."""
+    source = Path("src/frontend/ui_main_menu.py").read_text(encoding="utf-8")
+
+    assert 'summary_toggle_btn.grid(column=1, row=0, sticky="e")' in source
 
 
 def test_build_menu_sections_groups_actions_by_priority() -> None:

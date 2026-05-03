@@ -57,6 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The shared ttk theme now passes combobox popup fonts to Tk using a font tuple instead of a plain string, which fixes configuration dropdowns when the system font family contains spaces (for example `Segoe UI` on Windows).
 - Light theme shared widget borders now derive from a darker stroke color instead of a lighter one, and day-mode cards/buttons now use visible outlined chrome so panels and actions no longer disappear into the pale background.
 - The main menu no longer duplicates the `Mi acompañamiento` shortcut inside the quick-summary card; that entry now lives only in the `Seguimiento y apoyo` section.
+- The main-menu quick-summary card now keeps the `Mostrar` / `Ocultar` toggle inline at the right of the `Resumen rápido` title instead of placing a longer button underneath the heading.
 - Contacts tables now reserve more row height per wrapped line, which prevents clipped entries in long-description rows such as the `Nacionales` and `Castilla-La Mancha` contact lists.
 - The configuration dialog now limits appearance settings to a fixed day/night theme mode plus one global font-size control, with the rest of the UI styling derived automatically and older visual `.env` keys retired.
 - Reviewed the adaptive habit catalog so extreme, overly medical, clinical, unusually niche, overly normative/social-pressure, or strongly resource-dependent entries were removed from the base catalog and locale habit labels, and older saved profiles/logs are pruned to the same safer set during migration.
@@ -73,6 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Main menu quick summary now starts collapsed as a real expandable section, with a centered auto-sized toggle, smaller toggle text, and no extra heading text, and shared ttk theming now keeps notebooks, tables, dropdowns, and grouped panels on dark non-white surfaces across the newer dialogs.
 - Medication and visit logs can now optionally save a same-day wellbeing check-in from their existing dialogs.
 - Unified data view now includes companion process and wellbeing summary tabs.
+- README and Sphinx landing docs now explain the current product scope, user flows, privacy model, storage layout, exports, and profile-transfer behavior more clearly for end users.
 - Repository defaults and migrations now initialize `journey_stage` plus companion collections for existing users without losing previous data.
 - Default data storage now uses a user-scoped directory on Windows and Linux instead of the project-local `output/`, with one-time migration from legacy files when needed.
 - Settings restart now relaunches the app through the resolved `src/main.py` path instead of depending on `sys.argv[0]`.

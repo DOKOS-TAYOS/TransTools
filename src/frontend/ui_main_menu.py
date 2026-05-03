@@ -266,6 +266,7 @@ def create_main_menu(
         summary_card = ttk.Frame(main_frame, style="Card.TFrame", padding=18)
         summary_card.grid(column=0, row=1, columnspan=2, sticky="ew", pady=(0, pad + 2))
         summary_card.columnconfigure(0, weight=1)
+        summary_card.columnconfigure(1, weight=0)
 
         dashboard_summary_var = StringVar(value="")
         dashboard_summary_expanded_var = BooleanVar(value=False)
@@ -289,13 +290,13 @@ def create_main_menu(
             textvariable=dashboard_summary_toggle_var,
             style="SummaryToggle.TButton",
         )
-        summary_toggle_btn.grid(column=0, row=1, sticky="w", pady=(8, 0))
+        summary_toggle_btn.grid(column=1, row=0, sticky="e")
 
         def _apply_summary_visibility() -> None:
             is_expanded = bool(dashboard_summary_expanded_var.get())
             dashboard_summary_toggle_var.set(get_summary_toggle_label(is_expanded))
             if is_expanded:
-                summary_text.grid(column=0, row=2, sticky="ew", pady=(10, 0))
+                summary_text.grid(column=0, row=1, columnspan=2, sticky="ew", pady=(10, 0))
             else:
                 summary_text.grid_forget()
 

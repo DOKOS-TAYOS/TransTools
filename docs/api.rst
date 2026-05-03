@@ -1,6 +1,8 @@
 API Reference
 =============
 
+Esta seccion esta orientada a desarrollo. Documenta los modulos internos que hoy sostienen persistencia, privacidad, exportes, analisis de audio y transferencia de perfiles.
+
 Core
 ----
 
@@ -19,6 +21,16 @@ Core
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: core.profile_transfer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: core.types
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Audio
 -----
 
@@ -27,3 +39,15 @@ Audio
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: audio.recorder
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Configuration
+-------------
+
+.. automodule:: config.paths
+   :members:
+   :undoc-members:
+   :show-inheritance:
