@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from tkinter import Tk, Toplevel
-from typing import Protocol
+from collections.abc import Sequence
+from dataclasses import dataclass
+from tkinter import Tk, Toplevel, ttk
+from typing import Literal, Protocol
 
 VERTICAL_CENTER_BIAS = 18
 WINDOW_SCREEN_MARGIN = 40
+WINDOW_SCREEN_VERTICAL_MARGIN = 72
 
 
 class SupportsRequestedWindowSize(Protocol):
@@ -19,6 +22,17 @@ class SupportsRequestedWindowSize(Protocol):
     def winfo_reqheight(self) -> int:
         """Return the requested height for the current layout."""
         ...
+
+
+@dataclass(frozen=True)
+class TreeColumnSpec:
+    """Column sizing contract for dense tree views."""
+
+    name: str
+    width: int
+    minwidth: int
+    anchor: Literal["nw", "n", "ne", "w", "center", "e", "sw", "s", "se"] = "w"
+    stretch: bool = False
 
 
 def _get_window_decoration_size(window: Tk | Toplevel) -> tuple[int, int]:
@@ -43,10 +57,11 @@ def fit_window_size_to_screen(
     screen_width: int,
     screen_height: int,
     margin: int = WINDOW_SCREEN_MARGIN,
+    height_margin: int = WINDOW_SCREEN_VERTICAL_MARGIN,
 ) -> tuple[int, int]:
     """Clamp a requested window size so it fits inside the current screen."""
     available_width = max(200, int(screen_width) - int(margin))
-    available_height = max(200, int(screen_height) - int(margin))
+    available_height = max(200, int(screen_height) - int(height_margin))
     fitted_width = max(200, min(int(width), available_width))
     fitted_height = max(200, min(int(height), available_height))
     return fitted_width, fitted_height
@@ -62,6 +77,18 @@ def expand_window_size_to_requested_layout(
         max(int(width), int(window.winfo_reqwidth())),
         max(int(height), int(window.winfo_reqheight())),
     )
+
+
+def apply_tree_column_specs(tree: ttk.Treeview, specs: Sequence[TreeColumnSpec]) -> None:
+    """Apply explicit width and stretch rules to a tree view."""
+    for spec in specs:
+        tree.column(
+            spec.name,
+            width=int(spec.width),
+            minwidth=int(spec.minwidth),
+            anchor=spec.anchor,
+            stretch=bool(spec.stretch),
+        )
 
 
 def place_window_centered(

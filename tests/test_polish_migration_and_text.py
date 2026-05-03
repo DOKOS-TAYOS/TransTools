@@ -103,14 +103,11 @@ def test_repository_normalizes_legacy_habit_ids_and_drops_help_flag() -> None:
 
         catalog_ids = [habit["id"] for habit in state["habit_catalog"]]
         assert "estiramientos_manana" in catalog_ids
-        assert "bano_relajante" in catalog_ids
+        assert "bano_relajante" not in catalog_ids
         assert broken_stretch not in catalog_ids
         assert broken_bath not in catalog_ids
-        assert state["records"]["habits"][0]["shown_habits"] == [
-            "estiramientos_manana",
-            "bano_relajante",
-        ]
-        assert state["records"]["habits"][0]["completed_habits"] == ["bano_relajante"]
+        assert state["records"]["habits"][0]["shown_habits"] == ["estiramientos_manana"]
+        assert state["records"]["habits"][0]["completed_habits"] == []
         assert state["meta"]["last_habit_count"] == 5
         assert "help_shown" not in state["meta"]
 
@@ -119,10 +116,7 @@ def test_repository_normalizes_legacy_habit_ids_and_drops_help_flag() -> None:
         reloaded = repo.load()
 
         assert "help_shown" not in saved_profile["meta"]
-        assert reloaded["records"]["habits"][0]["shown_habits"] == [
-            "estiramientos_manana",
-            "bano_relajante",
-        ]
+        assert reloaded["records"]["habits"][0]["shown_habits"] == ["estiramientos_manana"]
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
 

@@ -52,10 +52,10 @@ def test_build_theme_sizing_prefers_compact_defaults_for_dense_windows() -> None
 
 
 def test_fit_window_size_to_screen_clamps_oversized_dialogs() -> None:
-    """Requested window geometry should shrink when the screen is smaller."""
+    """Requested window geometry should leave extra vertical room on smaller screens."""
     assert fit_window_size_to_screen(1240, 860, screen_width=1280, screen_height=800) == (
         1240,
-        760,
+        728,
     )
 
 

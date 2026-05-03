@@ -2,11 +2,60 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from tkinter import Canvas, Frame, Label, Misc, ttk
 from typing import Any
 
 from config import UI_STYLE
 from config.theme import get_surface_palette
+
+
+def _is_widget_descendant(widget: Any | None, ancestor: object) -> bool:
+    """Return whether a widget belongs to the given ancestor tree."""
+    current = widget
+    while current is not None:
+        if current is ancestor:
+            return True
+        current = getattr(current, "master", None)
+    return False
+
+
+def _get_mousewheel_scroll_units(event: Any) -> int:
+    """Translate a Tk mousewheel event into vertical scroll units."""
+    delta = int(getattr(event, "delta", 0))
+    if delta > 0:
+        return -1
+    if delta < 0:
+        return 1
+
+    button_num = getattr(event, "num", None)
+    if button_num == 4:
+        return -1
+    if button_num == 5:
+        return 1
+    return 0
+
+
+def install_vertical_mousewheel_scrolling(
+    bind_root: Any,
+    scroll_region: object,
+    scroll_command: Callable[[int], Any],
+) -> None:
+    """Handle wheel scrolling for any widget contained in a scrollable region."""
+
+    def _on_mousewheel(event: Any) -> str | None:
+        if not _is_widget_descendant(getattr(event, "widget", None), scroll_region):
+            return None
+
+        units = _get_mousewheel_scroll_units(event)
+        if units == 0:
+            return None
+
+        scroll_command(units)
+        return "break"
+
+    for sequence in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+        bind_root.bind_all(sequence, _on_mousewheel, add="+")
 
 
 def create_collapsible_section(
@@ -100,16 +149,12 @@ def create_scrollable_content(
     def _on_canvas_configure(event: Any) -> None:
         canvas.itemconfig(canvas_window, width=int(event.width))
 
-    def _on_mousewheel(event: Any) -> None:
-        if getattr(event, "num", None) == 5 or getattr(event, "delta", 0) < 0:
-            canvas.yview_scroll(1, "units")
-        elif getattr(event, "num", None) == 4 or getattr(event, "delta", 0) > 0:
-            canvas.yview_scroll(-1, "units")
-
     canvas.bind("<Configure>", _on_canvas_configure)
-    parent.bind("<MouseWheel>", _on_mousewheel)
-    parent.bind("<Button-4>", _on_mousewheel)
-    parent.bind("<Button-5>", _on_mousewheel)
+    install_vertical_mousewheel_scrolling(
+        bind_root=parent,
+        scroll_region=container,
+        scroll_command=lambda units: canvas.yview_scroll(units, "units"),
+    )
 
     canvas.configure(yscrollcommand=scrollbar.set)
     scrollbar.pack(side="right", fill="y")

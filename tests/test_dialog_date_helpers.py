@@ -29,17 +29,6 @@ class FakeDateWidget:
         self.value = value
 
 
-class FakeRequiredDateEntry:
-    """Minimal date entry exposing the API used by the recording dialog."""
-
-    def __init__(self, selected_date: date) -> None:
-        self._selected_date = selected_date
-
-    def get_date(self) -> date:
-        """Return the selected date."""
-        return self._selected_date
-
-
 def test_set_optional_date_entry_clears_empty_values() -> None:
     """Empty optional dates should stay visually blank instead of becoming today."""
     adapter = DateEntryAdapter(FakeDateWidget(), fallback=True)
@@ -57,16 +46,12 @@ def test_get_optional_date_iso_returns_date_for_filled_value() -> None:
     assert _get_optional_date_iso(adapter) == "2026-05-02"
 
 
-def test_collect_record_form_state_uses_selected_target_date() -> None:
-    """Recording form state should preserve the date chosen in the UI."""
-    target_date, mood_self, should_save_audio = _collect_record_form_state(
-        target_date_entry=FakeRequiredDateEntry(date(2026, 4, 12)),
-        mood_happy=4,
-        mood_sad=1,
-        mood_angry=0,
+def test_collect_record_form_state_always_uses_today() -> None:
+    """Audio recording should always be registered for the current day."""
+    target_date, should_save_audio = _collect_record_form_state(
         should_save_audio=True,
+        today=date(2026, 4, 12),
     )
 
     assert target_date == date(2026, 4, 12)
-    assert mood_self["happy"] == 0.8
     assert should_save_audio is True

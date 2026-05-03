@@ -22,11 +22,78 @@ from core.context import get_app_service
 from core.exporters import export_to_csv, export_to_excel, export_to_pdf, export_to_png
 from frontend.date_widgets import DateEntryAdapter, create_date_entry, get_calendar_locale
 from frontend.input_widgets import create_combobox
-from frontend.window_utils import place_window_centered
+from frontend.window_utils import (
+    TreeColumnSpec,
+    apply_tree_column_specs,
+    place_window_centered,
+)
 from i18n import t
 from utils import DataStoreError, get_logger
 
 logger = get_logger(__name__)
+
+
+def get_process_tab_table_rows() -> dict[str, int]:
+    """Return the grid rows used by the stacked process tables."""
+    return {
+        "roadmap": 2,
+        "appointments": 4,
+    }
+
+
+def build_process_roadmap_tree_specs() -> tuple[TreeColumnSpec, ...]:
+    """Return explicit roadmap table widths for the process tab."""
+    return (
+        TreeColumnSpec("category", width=220, minwidth=200, anchor="w", stretch=False),
+        TreeColumnSpec("title", width=560, minwidth=420, anchor="w", stretch=True),
+        TreeColumnSpec("target", width=150, minwidth=140, anchor="w", stretch=False),
+        TreeColumnSpec("completed", width=120, minwidth=120, anchor="center", stretch=False),
+    )
+
+
+def build_process_appointments_tree_specs() -> tuple[TreeColumnSpec, ...]:
+    """Return explicit appointments table widths for the process tab."""
+    return (
+        TreeColumnSpec("date", width=160, minwidth=150, anchor="w", stretch=False),
+        TreeColumnSpec("type", width=220, minwidth=200, anchor="w", stretch=False),
+        TreeColumnSpec("title", width=500, minwidth=380, anchor="w", stretch=True),
+        TreeColumnSpec("done", width=120, minwidth=120, anchor="center", stretch=False),
+    )
+
+
+def _create_scrolled_tree_frame(
+    parent: ttk.Frame,
+    title: str,
+    columns: tuple[str, ...],
+    headings: dict[str, str],
+    specs: tuple[TreeColumnSpec, ...],
+    height: int,
+) -> ttk.Treeview:
+    """Create a labeled treeview with vertical and horizontal scrollbars."""
+    ttk.Label(parent, text=title).grid(column=0, row=0, sticky="w", pady=(0, 6))
+
+    tree_frame = ttk.Frame(parent)
+    tree_frame.grid(column=0, row=1, sticky="nsew")
+    tree_frame.columnconfigure(0, weight=1)
+    tree_frame.rowconfigure(0, weight=1)
+
+    tree = ttk.Treeview(
+        tree_frame,
+        columns=columns,
+        show="headings",
+        height=height,
+    )
+    for column_name in columns:
+        tree.heading(column_name, text=headings[column_name])
+    apply_tree_column_specs(tree, specs)
+    tree.grid(column=0, row=0, sticky="nsew")
+
+    yscroll = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
+    xscroll = ttk.Scrollbar(tree_frame, orient="horizontal", command=tree.xview)
+    tree.configure(yscrollcommand=yscroll.set, xscrollcommand=xscroll.set)
+    yscroll.grid(column=1, row=0, sticky="ns")
+    xscroll.grid(column=0, row=1, sticky="ew")
+    return tree
 
 
 def show_data_view_dialog(parent, app_service=None) -> None:
@@ -542,29 +609,49 @@ def _build_export_controls(parent, app_service) -> None:
 def _build_process_tab(parent: ttk.Frame, app_service: Any) -> None:
     """Show roadmap and appointment progress in the data view."""
     parent.columnconfigure(0, weight=1)
-    parent.columnconfigure(1, weight=1)
-    parent.rowconfigure(1, weight=1)
+    table_rows = get_process_tab_table_rows()
+    parent.rowconfigure(table_rows["roadmap"], weight=1)
+    parent.rowconfigure(table_rows["appointments"], weight=1)
 
     snapshot = app_service.get_dashboard_snapshot()
     intro = ttk.Label(
         parent,
         text=t("companion.process_intro"),
-        wraplength=920,
+        wraplength=1120,
         justify="left",
     )
-    intro.grid(column=0, row=0, columnspan=2, sticky="w", pady=(0, 8))
+    intro.grid(column=0, row=0, sticky="w", pady=(0, 8))
 
-    roadmap_tree = ttk.Treeview(
+    ttk.Label(
         parent,
+        text=t(
+            "companion.process_summary",
+            stage=t(f"companion.stage.{snapshot.journey_stage}"),
+            roadmap=str(snapshot.weekly_completed_steps),
+            wellbeing=str(snapshot.weekly_wellbeing_logs),
+            voice=str(snapshot.weekly_voice_samples),
+        ),
+        wraplength=1120,
+        justify="left",
+    ).grid(column=0, row=1, sticky="w", pady=(0, 10))
+
+    roadmap_section = ttk.Frame(parent)
+    roadmap_section.grid(column=0, row=table_rows["roadmap"], sticky="nsew", pady=(0, 10))
+    roadmap_section.columnconfigure(0, weight=1)
+    roadmap_section.rowconfigure(1, weight=1)
+    roadmap_tree = _create_scrolled_tree_frame(
+        roadmap_section,
+        title=t("companion.roadmap_title"),
         columns=("category", "title", "target", "completed"),
-        show="headings",
-        height=12,
+        headings={
+            "category": t("companion.roadmap_category"),
+            "title": t("companion.roadmap_title_col"),
+            "target": t("companion.roadmap_target"),
+            "completed": t("companion.roadmap_completed"),
+        },
+        specs=build_process_roadmap_tree_specs(),
+        height=7,
     )
-    roadmap_tree.heading("category", text=t("companion.roadmap_category"))
-    roadmap_tree.heading("title", text=t("companion.roadmap_title_col"))
-    roadmap_tree.heading("target", text=t("companion.roadmap_target"))
-    roadmap_tree.heading("completed", text=t("companion.roadmap_completed"))
-    roadmap_tree.grid(column=0, row=1, sticky="nsew", padx=(0, 8))
 
     for item in app_service.list_roadmap_items():
         roadmap_tree.insert(
@@ -578,35 +665,23 @@ def _build_process_tab(parent: ttk.Frame, app_service: Any) -> None:
             ),
         )
 
-    right_frame = ttk.Frame(parent)
-    right_frame.grid(column=1, row=1, sticky="nsew")
-    right_frame.columnconfigure(0, weight=1)
-    right_frame.rowconfigure(1, weight=1)
-
-    ttk.Label(
-        right_frame,
-        text=t(
-            "companion.process_summary",
-            stage=t(f"companion.stage.{snapshot.journey_stage}"),
-            roadmap=str(snapshot.weekly_completed_steps),
-            wellbeing=str(snapshot.weekly_wellbeing_logs),
-            voice=str(snapshot.weekly_voice_samples),
-        ),
-        wraplength=420,
-        justify="left",
-    ).grid(column=0, row=0, sticky="w", pady=(0, 8))
-
-    appointments_tree = ttk.Treeview(
-        right_frame,
+    appointments_section = ttk.Frame(parent)
+    appointments_section.grid(column=0, row=table_rows["appointments"], sticky="nsew")
+    appointments_section.columnconfigure(0, weight=1)
+    appointments_section.rowconfigure(1, weight=1)
+    appointments_tree = _create_scrolled_tree_frame(
+        appointments_section,
+        title=t("companion.upcoming_title"),
         columns=("date", "type", "title", "done"),
-        show="headings",
-        height=12,
+        headings={
+            "date": t("data.date"),
+            "type": t("other.visit_type"),
+            "title": t("companion.appointment_title"),
+            "done": t("companion.roadmap_completed"),
+        },
+        specs=build_process_appointments_tree_specs(),
+        height=7,
     )
-    appointments_tree.heading("date", text=t("data.date"))
-    appointments_tree.heading("type", text=t("other.visit_type"))
-    appointments_tree.heading("title", text=t("companion.appointment_title"))
-    appointments_tree.heading("done", text=t("companion.roadmap_completed"))
-    appointments_tree.grid(column=0, row=1, sticky="nsew")
 
     for prep in app_service.list_appointment_preps():
         appointments_tree.insert(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date
 from tkinter import BooleanVar, IntVar, StringVar, Text, Toplevel, messagebox, ttk
 from typing import Any, Callable
@@ -13,7 +14,8 @@ from core.types import AppointmentPrepRecord, DashboardSnapshot, RoadmapItem, We
 from frontend.date_widgets import DateEntryAdapter, create_date_entry
 from frontend.input_widgets import create_combobox, create_entry, create_spinbox
 from frontend.text_widgets import configure_notes_widget
-from frontend.window_utils import place_window_centered
+from frontend.ui_dialogs.section_widgets import create_scrollable_content
+from frontend.window_utils import TreeColumnSpec, apply_tree_column_specs, place_window_centered
 from i18n import t
 from utils import DataStoreError
 
@@ -28,6 +30,42 @@ _ROADMAP_CATEGORIES = [
 ]
 _APPOINTMENT_TYPES = ["medical", "psychology", "general"]
 _WELLBEING_SOURCES = ["manual", "medication", "visit"]
+
+
+@dataclass(frozen=True)
+class AppointmentFormTextHeights:
+    """Comfortable text widget heights for the appointments form."""
+
+    questions: int
+    talking_points: int
+    follow_up: int
+    outcome: int
+
+
+def build_appointment_tree_column_specs() -> tuple[TreeColumnSpec, ...]:
+    """Return the appointments table widths used by the companion dialog."""
+    return (
+        TreeColumnSpec("date", width=120, minwidth=112, anchor="w", stretch=False),
+        TreeColumnSpec("type", width=148, minwidth=132, anchor="w", stretch=False),
+        TreeColumnSpec("title", width=286, minwidth=260, anchor="w", stretch=True),
+        TreeColumnSpec("done", width=114, minwidth=110, anchor="center", stretch=False),
+    )
+
+
+def build_appointment_form_text_heights() -> dict[str, int]:
+    """Return the editing heights for multiline appointment fields."""
+    heights = AppointmentFormTextHeights(
+        questions=5,
+        talking_points=5,
+        follow_up=3,
+        outcome=3,
+    )
+    return {
+        "questions": heights.questions,
+        "talking_points": heights.talking_points,
+        "follow_up": heights.follow_up,
+        "outcome": heights.outcome,
+    }
 
 
 def _optional_date_to_iso(entry: DateEntryAdapter) -> str | None:
@@ -94,7 +132,7 @@ def show_companion_dialog(parent: Any, app_service: Any | None = None) -> None:
     dlg.title(t("menu.companion"))
     dlg.resizable(width=True, height=True)
     dlg.configure(background=UI_STYLE["bg"])
-    dlg.minsize(980, 700)
+    dlg.minsize(1140, 720)
     dlg.transient(parent)
 
     notebook = ttk.Notebook(dlg)
@@ -131,7 +169,7 @@ def show_companion_dialog(parent: Any, app_service: Any | None = None) -> None:
     ttk.Button(btn_frame, text=t("menu.close"), command=dlg.destroy).pack(side="right")
 
     _refresh_all()
-    place_window_centered(dlg, width=1120, height=780)
+    place_window_centered(dlg, width=1280, height=840)
 
 
 def _build_dashboard_tab(
@@ -463,11 +501,16 @@ def _build_appointments_tab(
     """Create the appointment preparation tab."""
     pad = int(UI_STYLE["padding"])
     parent.columnconfigure(0, weight=3)
-    parent.columnconfigure(1, weight=2)
+    parent.columnconfigure(1, weight=4)
     parent.rowconfigure(0, weight=1)
 
+    tree_frame = ttk.Frame(parent, style="Card.TFrame")
+    tree_frame.grid(column=0, row=0, sticky="nsew", padx=(0, pad))
+    tree_frame.columnconfigure(0, weight=1)
+    tree_frame.rowconfigure(0, weight=1)
+
     tree = ttk.Treeview(
-        parent,
+        tree_frame,
         columns=("date", "type", "title", "done"),
         show="headings",
         height=16,
@@ -476,18 +519,22 @@ def _build_appointments_tab(
     tree.heading("type", text=t("other.visit_type"))
     tree.heading("title", text=t("companion.appointment_title"))
     tree.heading("done", text=t("companion.roadmap_completed"))
-    tree.column("date", width=110, anchor="w")
-    tree.column("type", width=120, anchor="w")
-    tree.column("title", width=280, anchor="w")
-    tree.column("done", width=80, anchor="center")
-    tree.grid(column=0, row=0, sticky="nsew", padx=(0, pad))
+    apply_tree_column_specs(tree, build_appointment_tree_column_specs())
+    tree.grid(column=0, row=0, sticky="nsew")
 
-    form = ttk.Frame(parent)
-    form.grid(column=1, row=0, sticky="nsew")
+    tree_scroll = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
+    tree.configure(yscrollcommand=tree_scroll.set)
+    tree_scroll.grid(column=1, row=0, sticky="ns")
+
+    form_container, _form_canvas, form = create_scrollable_content(parent, str(UI_STYLE["bg"]))
+    form_container.grid(column=1, row=0, sticky="nsew")
+    form.configure(style="App.TFrame", padding=(0, 0, pad, 0))
+    form.columnconfigure(0, weight=1)
 
     current_id = StringVar(value="")
     title_var = StringVar(value="")
     status_var = StringVar(value="")
+    text_heights = build_appointment_form_text_heights()
 
     ttk.Label(form, text=t("data.date")).grid(column=0, row=0, sticky="w")
     target_entry = create_date_entry(form, width=14)
@@ -499,10 +546,10 @@ def _build_appointments_tab(
         form,
         state="readonly",
         values=[_appointment_type_label(kind) for kind in _APPOINTMENT_TYPES],
-        width=26,
+        width=34,
     )
     type_combo.set(_appointment_type_label("medical"))
-    type_combo.grid(column=0, row=3, sticky="w")
+    type_combo.grid(column=0, row=3, sticky="ew")
 
     ttk.Label(form, text=t("companion.appointment_title")).grid(
         column=0,
@@ -510,10 +557,10 @@ def _build_appointments_tab(
         sticky="w",
         pady=(pad, 0),
     )
-    create_entry(form, textvariable=title_var, width=32).grid(column=0, row=5, sticky="ew")
+    create_entry(form, textvariable=title_var, width=44).grid(column=0, row=5, sticky="ew")
 
     ttk.Label(form, text=t("companion.questions")).grid(column=0, row=6, sticky="w", pady=(pad, 0))
-    questions_text = Text(form, width=34, height=4)
+    questions_text = Text(form, width=44, height=text_heights["questions"], wrap="word")
     configure_notes_widget(questions_text)
     questions_text.grid(column=0, row=7, sticky="ew")
 
@@ -523,7 +570,7 @@ def _build_appointments_tab(
         sticky="w",
         pady=(pad, 0),
     )
-    talking_points_text = Text(form, width=34, height=4)
+    talking_points_text = Text(form, width=44, height=text_heights["talking_points"], wrap="word")
     configure_notes_widget(talking_points_text)
     talking_points_text.grid(column=0, row=9, sticky="ew")
 
@@ -533,7 +580,7 @@ def _build_appointments_tab(
         sticky="w",
         pady=(pad, 0),
     )
-    follow_up_text = Text(form, width=34, height=3)
+    follow_up_text = Text(form, width=44, height=text_heights["follow_up"], wrap="word")
     configure_notes_widget(follow_up_text)
     follow_up_text.grid(column=0, row=11, sticky="ew")
 
@@ -543,12 +590,12 @@ def _build_appointments_tab(
         sticky="w",
         pady=(pad, 0),
     )
-    outcome_text = Text(form, width=34, height=3)
+    outcome_text = Text(form, width=44, height=text_heights["outcome"], wrap="word")
     configure_notes_widget(outcome_text)
     outcome_text.grid(column=0, row=13, sticky="ew")
 
-    ttk.Label(form, textvariable=status_var, wraplength=360, justify="left").grid(
-        column=0, row=14, sticky="w", pady=(pad, 0)
+    ttk.Label(form, textvariable=status_var, wraplength=420, justify="left").grid(
+        column=0, row=14, sticky="ew", pady=(pad, 0)
     )
 
     items_by_id: dict[str, AppointmentPrepRecord] = {}
@@ -619,14 +666,18 @@ def _build_appointments_tab(
         except DataStoreError as exc:
             messagebox.showerror(t("error.generic"), str(exc))
 
-    ttk.Button(form, text=t("companion.new"), command=_clear_form).grid(
-        column=0, row=15, sticky="w", pady=(pad, 0)
+    action_frame = ttk.Frame(form)
+    action_frame.grid(column=0, row=15, sticky="ew", pady=(pad, 0))
+    action_frame.columnconfigure(0, weight=1)
+    action_frame.columnconfigure(1, weight=1)
+    ttk.Button(action_frame, text=t("companion.new"), command=_clear_form).grid(
+        column=0, row=0, sticky="ew", padx=(0, 6)
     )
-    ttk.Button(form, text=t("common.save"), command=_save).grid(
-        column=0, row=16, sticky="w", pady=(6, 0)
+    ttk.Button(action_frame, text=t("common.save"), command=_save).grid(
+        column=1, row=0, sticky="ew"
     )
-    ttk.Button(form, text=t("companion.mark_completed"), command=_complete).grid(
-        column=0, row=17, sticky="w", pady=(6, 0)
+    ttk.Button(action_frame, text=t("companion.mark_completed"), command=_complete).grid(
+        column=0, row=1, columnspan=2, sticky="ew", pady=(6, 0)
     )
 
     tree.bind("<<TreeviewSelect>>", _on_select)

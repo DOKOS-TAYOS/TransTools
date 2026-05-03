@@ -487,8 +487,8 @@ def configure_ttk_styles(root: Misc) -> None:
         foreground=fg,
         font=font,
         rowheight=sizing.tree_rowheight,
-        borderwidth=0,
-        relief="flat",
+        borderwidth=1,
+        relief="solid",
     )
     style.map(
         "Treeview",
@@ -500,8 +500,8 @@ def configure_ttk_styles(root: Misc) -> None:
         background=palette.tree_heading_bg,
         foreground=fg,
         font=font,
-        relief="flat",
-        borderwidth=0,
+        relief="raised",
+        borderwidth=1,
     )
     style.map(
         "Treeview.Heading",
