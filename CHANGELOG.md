@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The fake-history generator script now rebuilds `patient_history.json` with the current record schema, fills companion records such as roadmap items, appointment prep, wellbeing logs, and milestones, extends generated data through the current day, and still preserves existing voice rows that already point to saved audio files.
 - Scroll-heavy primary windows now open slightly taller by default, and the main menu also starts a bit higher, giving the companion center, contacts directory, configuration dialog, and landing screen more vertical room so their scrollbars stay still more often on the current default UI size; the `Ver mis datos` window keeps a slightly shorter dedicated height to avoid feeling oversized.
 - Collapsible information sections now use cleaner chevron icons for their open/closed state instead of plain `>` / `v` text.
 - Night mode UI chrome now uses clearer shared surface separation and visible dark-mode borders across cards, buttons, inputs, tables, listboxes, collapsible headers, and the main menu hero so the interface no longer reads as one flat block in dark theme.
@@ -53,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Button copy and feedback are now more explicit in key dialogs: onboarding now uses a clearer `Cancelar y salir` action, configuration checkboxes explain their exact effect next to the toggle, and companion actions that require a selected row now tell the user what to select instead of failing silently.
 - Profile import now validates exported JSON and the local voice-metrics key before replacing local data, so corrupt bundles fail fast instead of only breaking after restart.
 - Profile import now stages and rolls back managed files/directories when a replacement fails, preventing mixed old/new local state after partial import errors.
 - Configuration profile-transfer dialogs now handle optional Tk parents and their tests with stricter typing, which removes the remaining `pyright` errors in the config dialog flow.

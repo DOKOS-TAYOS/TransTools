@@ -315,7 +315,11 @@ def show_config_dialog(parent: Tk | Toplevel) -> bool:
         row,
         "config.general.save_audio",
         "config.general.save_audio_desc",
-        ttk.Checkbutton(gen_frame, variable=save_audio_var, text=""),
+        ttk.Checkbutton(
+            gen_frame,
+            variable=save_audio_var,
+            text=t("config.general.save_audio_toggle"),
+        ),
     )
 
     dur_var = IntVar(value=get_env_from_schema("RECORD_DURATION_SEC"))
@@ -354,7 +358,11 @@ def show_config_dialog(parent: Tk | Toplevel) -> bool:
         row,
         "config.general.log_console",
         "config.general.log_console_desc",
-        ttk.Checkbutton(gen_frame, variable=log_console_var, text=""),
+        ttk.Checkbutton(
+            gen_frame,
+            variable=log_console_var,
+            text=t("config.general.log_console_toggle"),
+        ),
     )
 
     theme_mode_choices = get_theme_mode_choices()

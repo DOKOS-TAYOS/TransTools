@@ -314,3 +314,34 @@ def test_main_menu_keeps_companion_entry_only_in_support_section() -> None:
 
     assert source.count('"action_key": "companion"') == 1
     assert 'text=t("menu.companion")' not in source
+
+
+def test_companion_selection_buttons_explain_their_scope_and_missing_selection_feedback() -> None:
+    """Selection-dependent actions should explain scope and guide missing selections."""
+    source = Path("src/frontend/ui_dialogs/companion_dialog.py").read_text(encoding="utf-8")
+    es_locale = Path("src/locales/es.json").read_text(encoding="utf-8")
+    en_locale = Path("src/locales/en.json").read_text(encoding="utf-8")
+
+    assert 'text=t("companion.toggle_selected_roadmap_item")' in source
+    assert 'status_var.set(t("companion.select_roadmap_item_first"))' in source
+    assert 'text=t("companion.complete_selected_appointment")' in source
+    assert 'status_var.set(t("companion.select_appointment_first"))' in source
+    assert '"companion.toggle_selected_roadmap_item"' in es_locale
+    assert '"companion.select_roadmap_item_first"' in es_locale
+    assert '"companion.complete_selected_appointment"' in es_locale
+    assert '"companion.select_appointment_first"' in es_locale
+    assert '"companion.toggle_selected_roadmap_item"' in en_locale
+    assert '"companion.select_roadmap_item_first"' in en_locale
+    assert '"companion.complete_selected_appointment"' in en_locale
+    assert '"companion.select_appointment_first"' in en_locale
+
+
+def test_onboarding_uses_explicit_cancel_and_exit_copy() -> None:
+    """The onboarding exit action should warn in the button label that it stops setup and exits."""
+    source = Path("src/frontend/ui_dialogs/onboarding_dialog.py").read_text(encoding="utf-8")
+    es_locale = Path("src/locales/es.json").read_text(encoding="utf-8")
+    en_locale = Path("src/locales/en.json").read_text(encoding="utf-8")
+
+    assert 'text=t("onboarding.cancel_and_exit")' in source
+    assert '"onboarding.cancel_and_exit"' in es_locale
+    assert '"onboarding.cancel_and_exit"' in en_locale

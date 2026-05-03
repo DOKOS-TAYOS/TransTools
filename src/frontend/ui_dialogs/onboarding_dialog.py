@@ -177,7 +177,7 @@ def show_onboarding_dialog(parent, app_service=None) -> bool:
     btn_prev = ttk.Button(nav, text=t("onboarding.prev"))
     btn_next = ttk.Button(nav, text=t("onboarding.next"))
     btn_finish = ttk.Button(nav, text=t("onboarding.finish"))
-    btn_cancel = ttk.Button(nav, text=t("menu.exit"), style="Danger.TButton")
+    btn_cancel = ttk.Button(nav, text=t("onboarding.cancel_and_exit"), style="Danger.TButton")
 
     btn_prev.pack(side="left", padx=4)
     btn_next.pack(side="left", padx=4)

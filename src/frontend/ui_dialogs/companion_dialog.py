@@ -420,6 +420,7 @@ def _build_roadmap_tab(
         _set_text_value(details_text, item.details)
         active_var.set(item.is_active)
         hidden_var.set(item.is_hidden)
+        status_var.set("")
 
     def _clear_form() -> None:
         current_id.set("")
@@ -429,6 +430,7 @@ def _build_roadmap_tab(
         _set_text_value(details_text, None)
         active_var.set(True)
         hidden_var.set(False)
+        status_var.set("")
 
     def _on_select(_event=None) -> None:
         selected = tree.focus()
@@ -459,9 +461,12 @@ def _build_roadmap_tab(
     def _toggle_completed() -> None:
         selected = tree.focus()
         if not selected or selected not in items_by_id:
+            status_var.set(t("companion.select_roadmap_item_first"))
+            tree.focus_set()
             return
         item = items_by_id[selected]
         app_service.toggle_roadmap_item_completed(item.id, completed=not item.completed)
+        status_var.set(t("companion.saved"))
         _refresh()
         refresh_dashboard()
 
@@ -471,9 +476,11 @@ def _build_roadmap_tab(
     ttk.Button(form, text=t("common.save"), command=_save).grid(
         column=0, row=12, sticky="w", pady=(6, 0)
     )
-    ttk.Button(form, text=t("companion.toggle_completed"), command=_toggle_completed).grid(
-        column=0, row=13, sticky="w", pady=(6, 0)
-    )
+    ttk.Button(
+        form,
+        text=t("companion.toggle_selected_roadmap_item"),
+        command=_toggle_completed,
+    ).grid(column=0, row=13, sticky="w", pady=(6, 0))
 
     tree.bind("<<TreeviewSelect>>", _on_select)
 
@@ -622,6 +629,7 @@ def _build_appointments_tab(
         _set_text_value(talking_points_text, item.talking_points)
         _set_text_value(follow_up_text, item.follow_up_step)
         _set_text_value(outcome_text, item.outcome_notes)
+        status_var.set("")
 
     def _clear_form() -> None:
         current_id.set("")
@@ -632,6 +640,7 @@ def _build_appointments_tab(
         _set_text_value(talking_points_text, None)
         _set_text_value(follow_up_text, None)
         _set_text_value(outcome_text, None)
+        status_var.set("")
 
     def _on_select(_event=None) -> None:
         selected = tree.focus()
@@ -659,6 +668,8 @@ def _build_appointments_tab(
     def _complete() -> None:
         selected = tree.focus()
         if not selected or selected not in items_by_id:
+            status_var.set(t("companion.select_appointment_first"))
+            tree.focus_set()
             return
         try:
             app_service.complete_appointment_prep(
@@ -682,9 +693,11 @@ def _build_appointments_tab(
     ttk.Button(action_frame, text=t("common.save"), command=_save).grid(
         column=1, row=0, sticky="ew"
     )
-    ttk.Button(action_frame, text=t("companion.mark_completed"), command=_complete).grid(
-        column=0, row=1, columnspan=2, sticky="ew", pady=(6, 0)
-    )
+    ttk.Button(
+        action_frame,
+        text=t("companion.complete_selected_appointment"),
+        command=_complete,
+    ).grid(column=0, row=1, columnspan=2, sticky="ew", pady=(6, 0))
 
     tree.bind("<<TreeviewSelect>>", _on_select)
 

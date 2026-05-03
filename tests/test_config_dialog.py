@@ -117,6 +117,20 @@ def test_config_dialog_uses_shared_combobox_factory() -> None:
     assert "ttk.Combobox(" not in source
 
 
+def test_config_dialog_uses_explicit_checkbox_copy() -> None:
+    """Boolean settings should explain the toggle action directly next to the checkbox."""
+    source = Path("src/frontend/ui_dialogs/config_dialog.py").read_text(encoding="utf-8")
+    es_locale = Path("src/locales/es.json").read_text(encoding="utf-8")
+    en_locale = Path("src/locales/en.json").read_text(encoding="utf-8")
+
+    assert 'text=t("config.general.save_audio_toggle")' in source
+    assert 'text=t("config.general.log_console_toggle")' in source
+    assert '"config.general.save_audio_toggle"' in es_locale
+    assert '"config.general.log_console_toggle"' in es_locale
+    assert '"config.general.save_audio_toggle"' in en_locale
+    assert '"config.general.log_console_toggle"' in en_locale
+
+
 def test_run_profile_export_flow_uses_selected_folder_and_reports_success(monkeypatch) -> None:
     """Export flow should pass the chosen directory to the profile exporter."""
     captured_path: Path | None = None
