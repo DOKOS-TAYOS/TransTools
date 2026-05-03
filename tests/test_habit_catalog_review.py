@@ -103,6 +103,19 @@ _REMOVED_HABIT_IDS: set[str] = {
     "donar_ropa",
 }
 
+_ADDED_MICRO_HABITS: dict[str, tuple[str, str]] = {
+    "descanso_visual": ("Descansar la vista 20 segundos", "Rest your eyes for 20 seconds"),
+    "levantarse_2_min": ("Levantarse y moverse 2 minutos", "Stand up and move for 2 minutes"),
+    "revisar_calendario": ("Revisar el calendario del día", "Review today's calendar"),
+    "elegir_prioridad": ("Elegir una prioridad de hoy", "Choose one priority for today"),
+    "anotar_siguiente_paso": (
+        "Anotar el siguiente paso de una tarea",
+        "Write down the next step for a task",
+    ),
+    "recoger_5_min": ("Ordenar durante 5 minutos", "Tidy up for 5 minutes"),
+    "preparar_manana": ("Dejar preparada una cosa para mañana", "Prepare one thing for tomorrow"),
+}
+
 
 def _make_workspace_temp_dir() -> Path:
     """Create a temporary directory inside the writable workspace."""
@@ -122,6 +135,19 @@ def test_default_catalog_excludes_dubious_or_extreme_habits(app_service) -> None
     for habit_id in _REMOVED_HABIT_IDS:
         assert f"habit.name.{habit_id}" not in locale_es
         assert f"habit.name.{habit_id}" not in locale_en
+
+
+def test_default_catalog_includes_easy_micro_habits_for_basics_and_planning(app_service) -> None:
+    """Default habits should include a few very easy routines and planning actions."""
+    state = app_service.get_state()
+    catalog_ids = {habit["id"] for habit in state["habit_catalog"]}
+    locale_es = _load_locale("es")
+    locale_en = _load_locale("en")
+
+    for habit_id, (label_es, label_en) in _ADDED_MICRO_HABITS.items():
+        assert habit_id in catalog_ids
+        assert locale_es[f"habit.name.{habit_id}"] == label_es
+        assert locale_en[f"habit.name.{habit_id}"] == label_en
 
 
 def test_repository_prunes_removed_habits_from_existing_catalog_and_logs() -> None:

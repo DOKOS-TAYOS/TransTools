@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Adaptive habit checklist now includes seven extra low-friction micro-habits for basic routines and lightweight day planning.
 - Companion Phase 1:
   - Main-menu quick summary panel with direct access to a new companion center.
   - Companion center with dashboard, editable roadmap, appointment preparation, and wellbeing tabs.
@@ -42,6 +43,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The shared ttk theme now passes combobox popup fonts to Tk using a font tuple instead of a plain string, which fixes configuration dropdowns when the system font family contains spaces (for example `Segoe UI` on Windows).
+- Light theme shared widget borders now derive from a darker stroke color instead of a lighter one, and day-mode cards/buttons now use visible outlined chrome so panels and actions no longer disappear into the pale background.
+- The main menu no longer duplicates the `Mi acompañamiento` shortcut inside the quick-summary card; that entry now lives only in the `Seguimiento y apoyo` section.
+- Contacts tables now reserve more row height per wrapped line, which prevents clipped entries in long-description rows such as the `Nacionales` and `Castilla-La Mancha` contact lists.
 - The configuration dialog now limits appearance settings to a fixed day/night theme mode plus one global font-size control, with the rest of the UI styling derived automatically and older visual `.env` keys retired.
 - Reviewed the adaptive habit catalog so extreme, overly medical, clinical, unusually niche, overly normative/social-pressure, or strongly resource-dependent entries were removed from the base catalog and locale habit labels, and older saved profiles/logs are pruned to the same safer set during migration.
 - Voice recording now always registers the sample for the current day, and the recording dialog no longer mixes in self-reported emotional scoring because that check-in belongs in a separate flow.

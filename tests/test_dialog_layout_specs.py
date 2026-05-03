@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from frontend.ui_dialogs.companion_dialog import (
     build_appointment_form_text_heights,
     build_appointment_tree_column_specs,
@@ -71,3 +74,26 @@ def test_contact_table_geometry_expands_for_long_national_descriptions() -> None
 
     assert long_geometry.description_lines > short_geometry.description_lines
     assert long_geometry.rowheight > short_geometry.rowheight
+
+
+def test_contact_table_geometry_gives_extra_headroom_for_real_national_rows() -> None:
+    """The national contacts table should leave enough room for the longest wrapped entry."""
+    contacts = json.loads(Path("src/data/contacts.json").read_text(encoding="utf-8"))
+
+    geometry = build_contact_table_geometry(contacts["national"], font_size=13)
+
+    assert geometry.description_lines >= 5
+    assert geometry.rowheight >= 120
+
+
+def test_contact_table_geometry_gives_extra_headroom_for_castilla_la_mancha_rows() -> None:
+    """Castilla-La Mancha regional rows should not clip the long public-service description."""
+    contacts = json.loads(Path("src/data/contacts.json").read_text(encoding="utf-8"))
+
+    geometry = build_contact_table_geometry(
+        contacts["regional"]["Castilla-La Mancha"],
+        font_size=13,
+    )
+
+    assert geometry.description_lines >= 6
+    assert geometry.rowheight >= 142

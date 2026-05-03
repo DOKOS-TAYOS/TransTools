@@ -276,12 +276,6 @@ def create_main_menu(
             text=t("companion.menu_summary_title"),
             style="CardTitle.TLabel",
         ).grid(column=0, row=0, sticky="w")
-        ttk.Button(
-            summary_card,
-            text=t("menu.companion"),
-            command=callbacks["companion"],
-            style="Accent.TButton",
-        ).grid(column=1, row=0, sticky="e", padx=(pad, 0))
 
         summary_text = ttk.Label(
             summary_card,
@@ -301,7 +295,7 @@ def create_main_menu(
             is_expanded = bool(dashboard_summary_expanded_var.get())
             dashboard_summary_toggle_var.set(get_summary_toggle_label(is_expanded))
             if is_expanded:
-                summary_text.grid(column=0, row=2, columnspan=2, sticky="ew", pady=(10, 0))
+                summary_text.grid(column=0, row=2, sticky="ew", pady=(10, 0))
             else:
                 summary_text.grid_forget()
 

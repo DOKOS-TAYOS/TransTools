@@ -18,6 +18,9 @@ from i18n import t
 
 CONTACT_DESCRIPTION_WRAP_WIDTH = 36
 CONTACT_MIN_DESCRIPTION_LINES = 4
+CONTACT_ROW_LINE_HEIGHT_EXTRA = 8
+CONTACT_ROW_VERTICAL_PADDING = 10
+CONTACT_MIN_ROWHEIGHT = 80
 
 
 def _wrap_description(
@@ -57,8 +60,11 @@ def get_contact_tree_rowheight(
 ) -> int:
     """Return a row height that can hold wrapped contact descriptions."""
     normalized_lines = max(CONTACT_MIN_DESCRIPTION_LINES, int(description_lines))
-    line_height = max(int(font_size) + 6, 18)
-    return max(72, (line_height * normalized_lines) + 10)
+    line_height = max(int(font_size) + CONTACT_ROW_LINE_HEIGHT_EXTRA, 22)
+    return max(
+        CONTACT_MIN_ROWHEIGHT,
+        (line_height * normalized_lines) + CONTACT_ROW_VERTICAL_PADDING,
+    )
 
 
 def build_contact_table_geometry(

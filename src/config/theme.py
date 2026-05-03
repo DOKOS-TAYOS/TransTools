@@ -74,6 +74,16 @@ class ThemeSizing:
     check_indicator_size: int
 
 
+@dataclass(frozen=True)
+class ThemeChrome:
+    """Shared border and relief settings for themed surfaces."""
+
+    card_borderwidth: int
+    card_relief: str
+    button_borderwidth: int
+    button_relief: str
+
+
 _THEME_PRESETS: dict[str, ThemePreset] = {
     "dark": ThemePreset(
         mode="dark",
@@ -130,6 +140,18 @@ def _adjust_hex_brightness(hex_color: str, factor: float) -> str:
     return f"#{r:02x}{g:02x}{b:02x}"
 
 
+def _is_light_hex_color(hex_color: str) -> bool:
+    """Return True when the color is light enough to need darker borders."""
+    if not _is_hex_color(hex_color):
+        return False
+
+    red = int(hex_color[1:3], 16)
+    green = int(hex_color[3:5], 16)
+    blue = int(hex_color[5:7], 16)
+    relative_luminance = ((0.2126 * red) + (0.7152 * green) + (0.0722 * blue)) / 255
+    return relative_luminance >= 0.7
+
+
 def build_surface_palette(bg: str, btn_bg: str, fg: str | None = None) -> ThemeSurfacePalette:
     """Build a richer dark palette for ttk widgets and information panels."""
     resolved_fg = fg if fg is not None else "#cccccc"
@@ -139,7 +161,10 @@ def build_surface_palette(bg: str, btn_bg: str, fg: str | None = None) -> ThemeS
     panel_bg = _blend_hex_colors(bg, "#ffffff", 0.06)
     panel_alt_bg = _blend_hex_colors(bg, "#ffffff", 0.12)
     panel_raised_bg = _blend_hex_colors(btn_bg, "#ffffff", 0.10)
-    panel_border = _blend_hex_colors(bg, "#ffffff", 0.20)
+    if _is_light_hex_color(bg) and _is_hex_color(resolved_fg):
+        panel_border = _blend_hex_colors(bg, resolved_fg, 0.44)
+    else:
+        panel_border = _blend_hex_colors(bg, "#ffffff", 0.20)
     panel_highlight = _blend_hex_colors(btn_bg, "#6eb1c8", 0.34)
     hero_bg = _blend_hex_colors(bg, "#3890b4", 0.25)
     hero_fg = resolved_fg
@@ -225,6 +250,29 @@ def resolve_system_font_family(root: Misc | None = None) -> str:
     return _fallback_font_family()
 
 
+def build_combobox_listbox_font_value(font_family: str, font_size: int) -> tuple[str, int]:
+    """Build a Tk-safe font value for Combobox popdown listboxes."""
+    return (str(font_family), int(font_size))
+
+
+def build_theme_chrome(mode: str) -> ThemeChrome:
+    """Return shared relief and border settings for the active theme mode."""
+    if mode.strip().lower() == "light":
+        return ThemeChrome(
+            card_borderwidth=1,
+            card_relief="solid",
+            button_borderwidth=1,
+            button_relief="solid",
+        )
+
+    return ThemeChrome(
+        card_borderwidth=0,
+        card_relief="flat",
+        button_borderwidth=1,
+        button_relief="flat",
+    )
+
+
 def _derive_layout_padding(font_size: int) -> int:
     """Derive shared layout spacing from the base font size."""
     return max(4, round(max(8, int(font_size)) * 0.375))
@@ -294,6 +342,9 @@ def _configure_button_style(
     pressed_background: str,
     font: tuple[str, int],
     padding: tuple[int, int],
+    border_color: str,
+    border_width: int,
+    relief: str,
 ) -> None:
     """Configure a button style with filled surfaces."""
     style.configure(
@@ -302,8 +353,11 @@ def _configure_button_style(
         foreground=foreground,
         font=font,
         padding=padding,
-        borderwidth=1,
-        relief="flat",
+        borderwidth=border_width,
+        relief=relief,
+        bordercolor=border_color,
+        lightcolor=border_color,
+        darkcolor=border_color,
         focusthickness=1,
         focuscolor=hover_background,
     )
@@ -336,20 +390,34 @@ def configure_ttk_styles(root: Misc) -> None:
 
     palette = get_surface_palette()
     sizing = build_theme_sizing(int(UI_STYLE["font_size"]))
+    chrome = build_theme_chrome(str(UI_STYLE["theme_mode"]))
 
     btn_hover = _blend_hex_colors(btn_bg, "#ffffff", 0.14)
     btn_pressed = _blend_hex_colors(btn_bg, bg, 0.10)
 
     style.configure("TFrame", background=bg)
     style.configure("App.TFrame", background=bg)
-    style.configure("Card.TFrame", background=palette.panel_bg, relief="flat", borderwidth=0)
+    style.configure(
+        "Card.TFrame",
+        background=palette.panel_bg,
+        relief=chrome.card_relief,
+        borderwidth=chrome.card_borderwidth,
+        bordercolor=palette.panel_border,
+    )
     style.configure(
         "RaisedCard.TFrame",
         background=palette.panel_alt_bg,
-        relief="flat",
-        borderwidth=0,
+        relief=chrome.card_relief,
+        borderwidth=chrome.card_borderwidth,
+        bordercolor=palette.panel_border,
     )
-    style.configure("Toolbar.TFrame", background=palette.panel_bg, relief="flat", borderwidth=0)
+    style.configure(
+        "Toolbar.TFrame",
+        background=palette.panel_bg,
+        relief=chrome.card_relief,
+        borderwidth=chrome.card_borderwidth,
+        bordercolor=palette.panel_border,
+    )
 
     style.configure("TLabel", background=bg, foreground=fg, font=font)
     style.configure("Small.TLabel", background=bg, foreground=palette.muted_fg, font=font_small)
@@ -421,6 +489,9 @@ def configure_ttk_styles(root: Misc) -> None:
         pressed_background=btn_pressed,
         font=font,
         padding=sizing.button_padding,
+        border_color=palette.panel_border,
+        border_width=chrome.button_borderwidth,
+        relief=chrome.button_relief,
     )
     _configure_button_style(
         style,
@@ -431,6 +502,9 @@ def configure_ttk_styles(root: Misc) -> None:
         pressed_background=palette.panel_bg,
         font=font,
         padding=(sizing.button_padding[0] + 1, sizing.button_padding[1]),
+        border_color=palette.panel_border,
+        border_width=chrome.button_borderwidth,
+        relief=chrome.button_relief,
     )
     _configure_button_style(
         style,
@@ -441,6 +515,9 @@ def configure_ttk_styles(root: Misc) -> None:
         pressed_background=btn_pressed,
         font=font,
         padding=sizing.button_padding,
+        border_color=palette.panel_border,
+        border_width=chrome.button_borderwidth,
+        relief=chrome.button_relief,
     )
     _configure_button_style(
         style,
@@ -451,6 +528,9 @@ def configure_ttk_styles(root: Misc) -> None:
         pressed_background=_blend_hex_colors(palette.status_danger_bg, bg, 0.16),
         font=font,
         padding=sizing.button_padding,
+        border_color=palette.panel_border,
+        border_width=chrome.button_borderwidth,
+        relief=chrome.button_relief,
     )
     _configure_button_style(
         style,
@@ -461,6 +541,9 @@ def configure_ttk_styles(root: Misc) -> None:
         pressed_background=_blend_hex_colors(palette.status_warn_bg, bg, 0.16),
         font=font,
         padding=sizing.button_padding,
+        border_color=palette.panel_border,
+        border_width=chrome.button_borderwidth,
+        relief=chrome.button_relief,
     )
     _configure_button_style(
         style,
@@ -471,6 +554,9 @@ def configure_ttk_styles(root: Misc) -> None:
         pressed_background=palette.panel_bg,
         font=(str(UI_STYLE["font_family"]), max(8, int(UI_STYLE["font_size"]) - 3)),
         padding=sizing.summary_button_padding,
+        border_color=palette.panel_border,
+        border_width=chrome.button_borderwidth,
+        relief=chrome.button_relief,
     )
 
     style.configure(
@@ -506,7 +592,7 @@ def configure_ttk_styles(root: Misc) -> None:
         background=[("active", palette.entry_hover)],
         bordercolor=[("focus", palette.panel_highlight)],
     )
-    root.option_add("*TCombobox*Listbox.font", f"{font[0]} {font[1]}")
+    root.option_add("*TCombobox*Listbox.font", build_combobox_listbox_font_value(font[0], font[1]))
     root.option_add("*TCombobox*Listbox.background", palette.listbox_bg)
     root.option_add("*TCombobox*Listbox.foreground", fg)
     root.option_add("*TCombobox*Listbox.selectBackground", palette.listbox_select_bg)

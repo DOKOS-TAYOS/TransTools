@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
+import tkinter
+from pathlib import Path
+from typing import Any, cast
+
 import i18n
 from config.theme import (
     UI_STYLE,
+    ThemeChrome,
     ThemePreset,
     ThemeSizing,
     ThemeSurfacePalette,
+    build_combobox_listbox_font_value,
     build_surface_palette,
+    build_theme_chrome,
     build_theme_sizing,
     get_theme_preset,
     refresh_theme,
@@ -57,6 +64,14 @@ def test_get_theme_preset_returns_light_mode_by_name() -> None:
     assert preset.calendar_activity_bg == "#D7EAF7"
 
 
+def test_build_combobox_listbox_font_value_handles_system_font_names_with_spaces() -> None:
+    """Combobox popdown font values must stay valid when the system font family contains spaces."""
+    font_value = build_combobox_listbox_font_value("Segoe UI", 16)
+
+    assert font_value == ("Segoe UI", 16)
+    assert cast(Any, tkinter)._stringify(font_value) == "{{Segoe UI} 16}"
+
+
 def test_build_surface_palette_uses_non_white_surface_colors() -> None:
     """Interactive surfaces should stay aligned with the active theme surfaces."""
     palette = build_surface_palette(bg="#10161B", btn_bg="#1E2D38", fg="#F2F5F7")
@@ -70,6 +85,25 @@ def test_build_surface_palette_uses_non_white_surface_colors() -> None:
     assert palette.tree_bg == palette.entry_bg
     assert palette.listbox_bg == palette.entry_bg
     assert palette.tree_selected_bg == "#1E2D38"
+
+
+def test_build_surface_palette_uses_dark_borders_in_light_mode() -> None:
+    """Light mode should still render shared widget borders with a dark contrasting stroke."""
+    palette = build_surface_palette(bg="#F5F7FA", btn_bg="#DCE5EC", fg="#16202A")
+
+    assert palette.panel_border == "#92989e"
+    assert palette.listbox_border == "#92989e"
+
+
+def test_build_theme_chrome_enables_visible_outlines_in_light_mode() -> None:
+    """Light mode should outline cards and buttons instead of leaving them visually flat."""
+    chrome = build_theme_chrome("light")
+
+    assert isinstance(chrome, ThemeChrome)
+    assert chrome.card_borderwidth == 1
+    assert chrome.card_relief == "solid"
+    assert chrome.button_borderwidth == 1
+    assert chrome.button_relief == "solid"
 
 
 def test_build_theme_sizing_derives_compact_defaults_from_font_size() -> None:
@@ -165,3 +199,11 @@ def test_build_menu_sections_groups_actions_by_priority() -> None:
         "menu.exit",
     )
     assert tuple(section["columns"] for section in sections) == (2, 1, 2)
+
+
+def test_main_menu_keeps_companion_entry_only_in_support_section() -> None:
+    """The landing page should not duplicate the companion entry outside the support section."""
+    source = Path("src/frontend/ui_main_menu.py").read_text(encoding="utf-8")
+
+    assert source.count('"action_key": "companion"') == 1
+    assert 'text=t("menu.companion")' not in source
