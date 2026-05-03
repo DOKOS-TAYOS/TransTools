@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Configuration dialog now includes full-profile export/import/delete actions for moving or fully resetting local user data, including profile/history JSON files, the local voice-metrics key, and saved audio when present; destructive deletion now also requires typing `BORRAR`.
 - Adaptive habit checklist now includes seven extra low-friction micro-habits for basic routines and lightweight day planning.
 - Companion Phase 1:
   - Main-menu quick summary panel with direct access to a new companion center.
@@ -28,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Adaptive habit checklist
   - Contacts/resources
   - App information
+
+### Changed
+
+- Weekly voice trends are now hidden unless a week has voice samples on at least two distinct days, so single-day recordings do not produce weekly pitch analysis or exports.
   - Unified data view
   - Configuration
 - Voice privacy workflow:
@@ -40,6 +45,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Third-party license inventory (`THIRD_PARTY_LICENSES.md`).
 - Contacts dataset (`src/data/contacts.json`).
 - New dependencies: `tkcalendar`, `reportlab`, `cryptography`.
+
+### Fixed
+
+- Profile import now validates exported JSON and the local voice-metrics key before replacing local data, so corrupt bundles fail fast instead of only breaking after restart.
+- Profile import now stages and rolls back managed files/directories when a replacement fails, preventing mixed old/new local state after partial import errors.
+- Configuration profile-transfer dialogs now handle optional Tk parents and their tests with stricter typing, which removes the remaining `pyright` errors in the config dialog flow.
 
 ### Changed
 

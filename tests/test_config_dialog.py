@@ -8,6 +8,9 @@ from tkinter import TclError
 from frontend.ui_dialogs.config_dialog import (
     build_config_values_to_save,
     get_theme_mode_choices,
+    run_profile_delete_flow,
+    run_profile_export_flow,
+    run_profile_import_flow,
 )
 
 
@@ -112,3 +115,168 @@ def test_config_dialog_uses_shared_combobox_factory() -> None:
 
     assert "create_combobox(" in source
     assert "ttk.Combobox(" not in source
+
+
+def test_run_profile_export_flow_uses_selected_folder_and_reports_success(monkeypatch) -> None:
+    """Export flow should pass the chosen directory to the profile exporter."""
+    captured_path: Path | None = None
+    captured_message: tuple[str, str] | None = None
+
+    monkeypatch.setattr(
+        "frontend.ui_dialogs.config_dialog.filedialog.askdirectory",
+        lambda **kwargs: "C:/chosen",
+    )
+
+    def _fake_export_user_profile(export_root: Path) -> Path:
+        nonlocal captured_path
+        captured_path = export_root
+        return export_root / "bundle"
+
+    def _fake_showinfo(title: str, message: str, **kwargs: object) -> None:
+        nonlocal captured_message
+        captured_message = (title, message)
+
+    monkeypatch.setattr(
+        "frontend.ui_dialogs.config_dialog.export_user_profile",
+        _fake_export_user_profile,
+    )
+    monkeypatch.setattr("frontend.ui_dialogs.config_dialog.messagebox.showinfo", _fake_showinfo)
+
+    run_profile_export_flow(parent=None)
+
+    assert captured_path == Path("C:/chosen")
+    assert captured_message is not None
+    assert "bundle" in captured_message[1]
+
+
+def test_run_profile_import_flow_confirms_and_requests_restart(monkeypatch) -> None:
+    """Import flow should confirm replacement, call the importer and request restart."""
+    captured_path: Path | None = None
+    captured_message: tuple[str, str] | None = None
+
+    monkeypatch.setattr(
+        "frontend.ui_dialogs.config_dialog.filedialog.askdirectory",
+        lambda **kwargs: "C:/incoming",
+    )
+    monkeypatch.setattr(
+        "frontend.ui_dialogs.config_dialog.messagebox.askyesno",
+        lambda *args, **kwargs: True,
+    )
+
+    def _fake_import_user_profile(import_dir: Path) -> None:
+        nonlocal captured_path
+        captured_path = import_dir
+
+    def _fake_showinfo(title: str, message: str, **kwargs: object) -> None:
+        nonlocal captured_message
+        captured_message = (title, message)
+
+    monkeypatch.setattr(
+        "frontend.ui_dialogs.config_dialog.import_user_profile",
+        _fake_import_user_profile,
+    )
+    monkeypatch.setattr("frontend.ui_dialogs.config_dialog.messagebox.showinfo", _fake_showinfo)
+
+    restart_required = run_profile_import_flow(parent=None)
+
+    assert restart_required is True
+    assert captured_path == Path("C:/incoming")
+    assert captured_message is not None
+
+
+def test_run_profile_import_flow_stops_when_user_cancels_confirmation(monkeypatch) -> None:
+    """Import should not run when the replacement confirmation is rejected."""
+    called = {"imported": False}
+
+    monkeypatch.setattr(
+        "frontend.ui_dialogs.config_dialog.filedialog.askdirectory",
+        lambda **kwargs: "C:/incoming",
+    )
+    monkeypatch.setattr(
+        "frontend.ui_dialogs.config_dialog.messagebox.askyesno",
+        lambda *args, **kwargs: False,
+    )
+    monkeypatch.setattr(
+        "frontend.ui_dialogs.config_dialog.import_user_profile",
+        lambda import_dir: called.__setitem__("imported", True),
+    )
+
+    restart_required = run_profile_import_flow(parent=None)
+
+    assert restart_required is False
+    assert called["imported"] is False
+
+
+def test_run_profile_delete_flow_requires_written_confirmation_and_restarts(
+    monkeypatch,
+) -> None:
+    """Delete flow should require typing BORRAR before removing the profile."""
+    calls: dict[str, object] = {}
+
+    monkeypatch.setattr(
+        "frontend.ui_dialogs.config_dialog.messagebox.askyesno",
+        lambda *args, **kwargs: True,
+    )
+    monkeypatch.setattr(
+        "frontend.ui_dialogs.config_dialog.simpledialog.askstring",
+        lambda *args, **kwargs: "BORRAR",
+    )
+    monkeypatch.setattr(
+        "frontend.ui_dialogs.config_dialog.delete_user_profile",
+        lambda: calls.setdefault("deleted", True),
+    )
+    monkeypatch.setattr(
+        "frontend.ui_dialogs.config_dialog.messagebox.showinfo",
+        lambda title, message, **kwargs: calls.setdefault("message", (title, message)),
+    )
+
+    restart_required = run_profile_delete_flow(parent=None)
+
+    assert restart_required is True
+    assert calls["deleted"] is True
+
+
+def test_run_profile_delete_flow_stops_when_user_cancels_first_confirmation(
+    monkeypatch,
+) -> None:
+    """Delete should not run when the destructive confirmation is rejected."""
+    called = {"deleted": False}
+
+    monkeypatch.setattr(
+        "frontend.ui_dialogs.config_dialog.messagebox.askyesno",
+        lambda *args, **kwargs: False,
+    )
+    monkeypatch.setattr(
+        "frontend.ui_dialogs.config_dialog.delete_user_profile",
+        lambda: called.__setitem__("deleted", True),
+    )
+
+    restart_required = run_profile_delete_flow(parent=None)
+
+    assert restart_required is False
+    assert called["deleted"] is False
+
+
+def test_run_profile_delete_flow_stops_when_written_confirmation_is_wrong(
+    monkeypatch,
+) -> None:
+    """Delete should not run when the typed confirmation is missing or incorrect."""
+    called = {"deleted": False}
+
+    monkeypatch.setattr(
+        "frontend.ui_dialogs.config_dialog.messagebox.askyesno",
+        lambda *args, **kwargs: True,
+    )
+    monkeypatch.setattr(
+        "frontend.ui_dialogs.config_dialog.simpledialog.askstring",
+        lambda *args, **kwargs: "borrar",
+    )
+    monkeypatch.setattr(
+        "frontend.ui_dialogs.config_dialog.delete_user_profile",
+        lambda: called.__setitem__("deleted", True),
+    )
+
+    restart_required = run_profile_delete_flow(parent=None)
+
+    assert restart_required is False
+    assert called["deleted"] is False

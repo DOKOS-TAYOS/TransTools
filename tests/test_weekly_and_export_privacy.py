@@ -38,6 +38,21 @@ def test_weekly_aggregation_groups_by_monday(app_service) -> None:
     assert 209.0 <= weekly[0]["pitch_mean_hz"] <= 211.0
 
 
+def test_weekly_aggregation_requires_two_distinct_days(app_service) -> None:
+    """Weekly pitch data should stay hidden when a week only has one distinct day."""
+    app_service.complete_onboarding(first_name="Alex")
+    entries = [
+        _sample(200.0, date(2026, 3, 2)),
+        _sample(220.0, date(2026, 3, 2)),
+    ]
+    for analysis, day in entries:
+        app_service.add_voice_record(day, analysis, mood_self=None, audio_saved_path=None)
+
+    weekly = app_service.get_weekly_voice_summary()
+
+    assert weekly == []
+
+
 def test_daily_export_has_no_daily_pitch_columns(app_service) -> None:
     """Daily export must avoid per-day tone metrics."""
     app_service.complete_onboarding(first_name="Alex")

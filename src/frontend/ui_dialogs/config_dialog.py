@@ -3,15 +3,29 @@
 from __future__ import annotations
 
 from pathlib import Path
-from tkinter import BooleanVar, Canvas, IntVar, StringVar, TclError, Tk, Toplevel, messagebox, ttk
+from tkinter import (
+    BooleanVar,
+    Canvas,
+    IntVar,
+    StringVar,
+    TclError,
+    Tk,
+    Toplevel,
+    filedialog,
+    messagebox,
+    simpledialog,
+    ttk,
+)
 from typing import Any, cast
 
 from config import UI_STYLE, get_current_env_values, write_env_file
 from config.env import get_env_from_schema
 from config.theme import prepare_ttk_window
+from core.profile_transfer import delete_user_profile, export_user_profile, import_user_profile
 from frontend.input_widgets import create_combobox, create_entry, create_spinbox
 from frontend.window_utils import place_window_centered
 from i18n import t
+from utils import DataStoreError
 
 LEGACY_VISUAL_ENV_KEYS: tuple[str, ...] = (
     "UI_BACKGROUND",
@@ -76,6 +90,115 @@ def _normalize_theme_mode(raw_value: str) -> str:
     """Normalize theme mode to one of the supported persistent values."""
     theme_mode = str(raw_value).strip().lower()
     return theme_mode if theme_mode in {"dark", "light"} else "dark"
+
+
+def _show_error(title: str, message: str, parent: Tk | Toplevel | None) -> None:
+    """Show an error dialog, attaching it to a parent only when available."""
+    if parent is None:
+        messagebox.showerror(title, message)
+        return
+    messagebox.showerror(title, message, parent=parent)
+
+
+def _show_info(title: str, message: str, parent: Tk | Toplevel | None) -> None:
+    """Show an info dialog, attaching it to a parent only when available."""
+    if parent is None:
+        messagebox.showinfo(title, message)
+        return
+    messagebox.showinfo(title, message, parent=parent)
+
+
+def _ask_yes_no(title: str, message: str, parent: Tk | Toplevel | None) -> bool:
+    """Ask for confirmation, attaching the dialog to a parent only when available."""
+    if parent is None:
+        return bool(messagebox.askyesno(title, message))
+    return bool(messagebox.askyesno(title, message, parent=parent))
+
+
+def run_profile_export_flow(parent: Tk | Toplevel | None) -> None:
+    """Run the full export flow for the local profile dataset."""
+    selected = filedialog.askdirectory(
+        parent=parent,
+        title=t("config.profile_transfer.export_choose_dir"),
+        mustexist=False,
+    )
+    if not selected:
+        return
+    try:
+        export_dir = export_user_profile(export_root=Path(selected))
+    except DataStoreError as exc:
+        _show_error(t("error.generic"), str(exc), parent=parent)
+        return
+
+    _show_info(
+        t("menu.config"),
+        t("config.profile_transfer.export_success", path=str(export_dir)),
+        parent=parent,
+    )
+
+
+def run_profile_import_flow(parent: Tk | Toplevel | None) -> bool:
+    """Run the full import flow and report whether the app should restart."""
+    selected = filedialog.askdirectory(
+        parent=parent,
+        title=t("config.profile_transfer.import_choose_dir"),
+        mustexist=True,
+    )
+    if not selected:
+        return False
+
+    confirmed = _ask_yes_no(
+        t("menu.config"),
+        t("config.profile_transfer.import_confirm"),
+        parent=parent,
+    )
+    if not confirmed:
+        return False
+
+    try:
+        import_user_profile(import_dir=Path(selected))
+    except DataStoreError as exc:
+        _show_error(t("error.generic"), str(exc), parent=parent)
+        return False
+
+    _show_info(
+        t("menu.config"),
+        t("config.profile_transfer.import_success"),
+        parent=parent,
+    )
+    return True
+
+
+def run_profile_delete_flow(parent: Tk | Toplevel | None) -> bool:
+    """Delete the full local profile and report whether the app should restart."""
+    confirmed = _ask_yes_no(
+        t("menu.config"),
+        t("config.profile_transfer.delete_confirm"),
+        parent=parent,
+    )
+    if not confirmed:
+        return False
+
+    typed_confirmation = simpledialog.askstring(
+        t("menu.config"),
+        t("config.profile_transfer.delete_type_prompt"),
+        parent=parent,
+    )
+    if (typed_confirmation or "").strip() != "BORRAR":
+        return False
+
+    try:
+        delete_user_profile()
+    except DataStoreError as exc:
+        _show_error(t("error.generic"), str(exc), parent=parent)
+        return False
+
+    _show_info(
+        t("menu.config"),
+        t("config.profile_transfer.delete_success"),
+        parent=parent,
+    )
+    return True
 
 
 def build_config_values_to_save(
@@ -269,7 +392,41 @@ def show_config_dialog(parent: Tk | Toplevel) -> bool:
         ),
     )
 
+    transfer_buttons = ttk.Frame(gen_frame)
+    ttk.Button(
+        transfer_buttons,
+        text=t("config.profile_transfer.export"),
+        command=lambda: run_profile_export_flow(parent=dlg),
+    ).pack(side="left", padx=(0, 6))
+    ttk.Button(
+        transfer_buttons,
+        text=t("config.profile_transfer.import"),
+        command=lambda: _handle_profile_import(),
+    ).pack(side="left")
+    ttk.Button(
+        transfer_buttons,
+        text=t("config.profile_transfer.delete"),
+        command=lambda: _handle_profile_delete(),
+    ).pack(side="left", padx=(6, 0))
+    row = _add_param_row(
+        gen_frame,
+        row,
+        "config.profile_transfer.title",
+        "config.profile_transfer.desc",
+        transfer_buttons,
+    )
+
     notebook.add(gen_frame, text=t("config.tab_general"))
+
+    def _handle_profile_import() -> None:
+        if run_profile_import_flow(parent=dlg):
+            result["saved"] = True
+            dlg.destroy()
+
+    def _handle_profile_delete() -> None:
+        if run_profile_delete_flow(parent=dlg):
+            result["saved"] = True
+            dlg.destroy()
 
     def save() -> None:
         values = build_config_values_to_save(

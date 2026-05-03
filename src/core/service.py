@@ -762,6 +762,7 @@ class AppService:
                 {
                     "week_start": week_start,
                     "samples": 0,
+                    "days": set(),
                     "pitch_mean_hz": [],
                     "pitch_min_hz": [],
                     "pitch_max_hz": [],
@@ -773,6 +774,7 @@ class AppService:
                 },
             )
             bucket["samples"] += 1
+            bucket["days"].add(target.isoformat())
             if tone:
                 bucket["pitch_mean_hz"].append(float(tone.get("pitch_mean_hz", 0.0)))
                 bucket["pitch_min_hz"].append(float(tone.get("pitch_min_hz", 0.0)))
@@ -786,6 +788,8 @@ class AppService:
 
         result: list[dict[str, Any]] = []
         for week_start, values in sorted(buckets.items()):
+            if len(values["days"]) < 2:
+                continue
             result.append(
                 {
                     "week_start": week_start,
