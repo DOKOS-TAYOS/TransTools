@@ -14,7 +14,7 @@ if str(SRC) not in sys.path:
 project = "TransTools"
 author = "Alejandro Mata Ali"
 copyright = f"{datetime.now().year}, {author}"
-release = "0.2.0"
+release = "0.2.1"
 
 extensions = [
     "sphinx.ext.autodoc",
