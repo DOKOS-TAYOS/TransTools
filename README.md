@@ -251,6 +251,7 @@ Si vas a trabajar sobre el codigo del repo, puedes dejar la misma caja de herram
 .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
 ruff check .
+pip-audit
 pyright
 pytest -q
 ```
@@ -261,6 +262,7 @@ pytest -q
 source .venv/bin/activate
 pip install -e ".[dev]"
 ruff check .
+pip-audit
 pyright
 pytest -q
 ```

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added repository Dependabot configuration for Python dependencies, Sphinx docs dependencies, and GitHub Actions.
+- Added `pip-audit` to the development toolchain and CI workflow so known vulnerable Python packages fail automated checks.
+- Added GitHub dependency review for pull requests.
+
+### Fixed
+
+- Local `.env` writing now flattens multiline values before saving, preventing accidental extra environment assignments from pasted config text.
+- Newly generated local voice-metrics encryption keys now use private POSIX file permissions where supported.
+
 ## [0.2.0] - 2026-05-03
 
 ### Added

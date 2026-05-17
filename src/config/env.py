@@ -113,6 +113,15 @@ ENV_SCHEMA: list[dict[str, Any]] = [
 _ENV_SCHEMA_BY_KEY: dict[str, dict[str, Any]] = {i["key"]: i for i in ENV_SCHEMA}
 
 
+def _format_env_value(raw_value: object) -> str:
+    """Return a single-line .env value safe for one KEY=value assignment."""
+    value = str(raw_value).replace("\r", " ").replace("\n", " ").strip()
+    if " " in value or "#" in value:
+        escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+        return f'"{escaped}"'
+    return value
+
+
 def get_env(
     key: str,
     default: Any,
@@ -204,10 +213,7 @@ def write_env_file(env_path: Path, values: dict[str, str]) -> None:
         key = item["key"]
         if key not in values:
             continue
-        value = values[key].strip()
-        if " " in value or "#" in value or "\n" in value:
-            value = f'"{value}"'
-        lines.append(f"{key}={value}")
+        lines.append(f"{key}={_format_env_value(values[key])}")
     env_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 

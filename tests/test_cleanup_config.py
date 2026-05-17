@@ -127,6 +127,30 @@ def test_write_env_file_ignores_legacy_visual_settings() -> None:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 
+def test_write_env_file_flattens_multiline_values() -> None:
+    """Newlines in config values should not create extra .env assignments."""
+    temp_dir = _make_workspace_temp_dir()
+    try:
+        env_path = temp_dir / ".env"
+
+        write_env_file(
+            env_path,
+            {
+                "LANGUAGE": "es",
+                "FILE_OUTPUT_DIR": "safe-output\nSAVE_AUDIO=true",
+                "SAVE_AUDIO": "false",
+            },
+        )
+
+        content = env_path.read_text(encoding="utf-8")
+
+        assert 'FILE_OUTPUT_DIR="safe-output SAVE_AUDIO=true"' in content
+        assert sum(line.startswith("SAVE_AUDIO=") for line in content.splitlines()) == 1
+        assert "SAVE_AUDIO=false" in content
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
 def test_cleanup_temp_file_swallows_os_errors_for_non_files() -> None:
     """Fixture cleanup helper should tolerate paths that cannot be unlinked as files."""
     temp_dir = _make_workspace_temp_dir()

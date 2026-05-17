@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -95,6 +96,22 @@ class VoicePrivacyService:
             raise ConfigError("No se pudo inicializar el cifrado local") from exc
 
         key = Fernet.generate_key()
-        self.key_path.write_bytes(key + b"\n")
+        self._write_new_key(key)
         logger.info("Created new local voice encryption key: %s", self.key_path)
         return key
+
+    def _write_new_key(self, key: bytes) -> None:
+        """Create the local key file with private permissions where the OS supports it."""
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        file_descriptor: int | None = os.open(self.key_path, flags, 0o600)
+        try:
+            with os.fdopen(file_descriptor, "wb") as key_file:
+                file_descriptor = None
+                key_file.write(key + b"\n")
+        finally:
+            if file_descriptor is not None:
+                # os.fdopen owns and closes the descriptor after it succeeds.
+                # This only handles the narrow failure window before ownership transfers.
+                os.close(file_descriptor)
+        if os.name != "nt":
+            os.chmod(self.key_path, 0o600)

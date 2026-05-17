@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import tomllib
 
 from conftest import ROOT
 
@@ -39,6 +40,34 @@ def test_ci_workflow_installs_and_runs_pyright() -> None:
     assert 'pip install -e ".[dev]"' in workflow_text
     assert "- name: Pyright" in workflow_text
     assert "run: pyright" in workflow_text
+
+
+def test_ci_workflow_runs_dependency_audit() -> None:
+    """CI should fail when installed Python dependencies have known vulnerabilities."""
+    workflow_text = _read_text(".github/workflows/ci.yml")
+
+    assert "- name: Pip audit" in workflow_text
+    assert "run: pip-audit" in workflow_text
+
+
+def test_dev_dependencies_include_security_auditor() -> None:
+    """The local/CI dev extra should install the dependency-audit command."""
+    pyproject_data = tomllib.loads(_read_text("pyproject.toml"))
+
+    dev_dependencies = pyproject_data["project"]["optional-dependencies"]["dev"]
+
+    assert "pip-audit" in dev_dependencies
+
+
+def test_dependabot_configuration_covers_project_ecosystems() -> None:
+    """Dependabot should watch Python dependencies, docs dependencies, and Actions."""
+    config_text = _read_text(".github/dependabot.yml")
+
+    assert 'package-ecosystem: "pip"' in config_text
+    assert 'directory: "/"' in config_text
+    assert 'directory: "/docs"' in config_text
+    assert 'package-ecosystem: "github-actions"' in config_text
+    assert 'interval: "weekly"' in config_text
 
 
 def test_reviewed_helpers_keep_explicit_type_annotations() -> None:
