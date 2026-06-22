@@ -2,7 +2,13 @@ name: CI
 
 on:
   push:
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
   pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
 
 permissions:
   contents: read
@@ -55,6 +61,7 @@ jobs:
         run: pyright
 
       - name: Pip audit
+        if: github.event_name != 'pull_request'
         run: pip-audit
 
       - name: Pytest
