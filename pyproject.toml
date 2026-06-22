@@ -40,10 +40,10 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pip-audit",
-    "pyright",
-    "pytest",
-    "ruff",
+    "pip-audit>=2.10.1",
+    "pyright>=1.1.410",
+    "pytest>=9.1.1",
+    "ruff>=0.15.18",
 ]
 
 [project.scripts]
