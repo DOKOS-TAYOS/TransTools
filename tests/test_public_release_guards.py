@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import re
 import tomllib
 
 from conftest import ROOT
@@ -33,6 +34,14 @@ def _annotation_text(annotation: ast.expr | None) -> str | None:
     return ast.unparse(annotation)
 
 
+def _requirement_name(requirement: str) -> str:
+    """Extract the distribution name from a PEP 508-style requirement string."""
+    match = re.match(r"\s*([A-Za-z0-9][A-Za-z0-9._-]*)", requirement)
+    if match is None:
+        raise AssertionError(f"Could not parse requirement name from {requirement!r}")
+    return match.group(1)
+
+
 def test_ci_workflow_installs_and_runs_pyright() -> None:
     """CI should install the dev toolchain and execute pyright explicitly."""
     workflow_text = _read_text(".github/workflows/ci.yml")
@@ -56,7 +65,9 @@ def test_dev_dependencies_include_security_auditor() -> None:
 
     dev_dependencies = pyproject_data["project"]["optional-dependencies"]["dev"]
 
-    assert "pip-audit" in dev_dependencies
+    dependency_names = {_requirement_name(dependency) for dependency in dev_dependencies}
+
+    assert "pip-audit" in dependency_names
 
 
 def test_dependabot_configuration_covers_project_ecosystems() -> None:
