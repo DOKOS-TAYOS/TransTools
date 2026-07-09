@@ -11,6 +11,7 @@ from types import ModuleType
 from uuid import uuid4
 
 from core.privacy import VoicePrivacyService
+from core.repository import RepositoryPaths, StateRepository, default_state
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = ROOT / "scripts" / "generate_fake_history.py"
@@ -103,5 +104,39 @@ def test_build_fake_history_keeps_upcoming_companion_items() -> None:
             row["target_date"] > today.isoformat() and not row["is_completed"]
             for row in history["records"]["appointment_preps"]
         )
+    finally:
+        key_path.unlink(missing_ok=True)
+
+
+def test_save_generated_history_preserves_existing_profile_data(tmp_path: Path) -> None:
+    """Saving generated history should preserve profile data and only replace records."""
+    module = _load_script_module()
+    key_path = _create_test_key_path()
+    privacy = VoicePrivacyService(key_path=key_path)
+    paths = RepositoryPaths(
+        profile_file=tmp_path / "patient_profile.json",
+        history_file=tmp_path / "patient_history.json",
+        legacy_file=tmp_path / "patient_data.json",
+    )
+    repository = StateRepository(paths=paths)
+    state = default_state()
+    state["profile"]["first_name"] = "Alex"
+    repository.save(state)
+    try:
+        history = module.build_fake_history(
+            start=date(2026, 1, 1),
+            end=date(2026, 5, 3),
+            privacy=privacy,
+            catalog_ids=["hidratarse", "dormir", "caminar", "respirar"],
+            existing_voice=[],
+            rng=random.Random(999),
+        )
+
+        saved_path = module.save_generated_history(history, repository=repository)
+        reloaded = repository.load()
+
+        assert saved_path == paths.history_file
+        assert reloaded["profile"]["first_name"] == "Alex"
+        assert reloaded["records"] == history["records"]
     finally:
         key_path.unlink(missing_ok=True)

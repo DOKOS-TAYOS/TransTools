@@ -20,7 +20,7 @@ if str(SRC) not in sys.path:
 
 from config.paths import get_output_dir, get_patient_history_path  # noqa: E402
 from core.privacy import VoicePrivacyService  # noqa: E402
-from core.repository import default_history_state  # noqa: E402
+from core.repository import StateRepository, default_history_state  # noqa: E402
 
 DEFAULT_HABIT_IDS = [
     "hidratarse",
@@ -527,6 +527,25 @@ def load_habit_catalog_ids(profile_path: Path) -> list[str]:
     return _normalize_catalog_ids([habit_id for habit_id in ids if isinstance(habit_id, str)])
 
 
+def save_generated_history(
+    history: dict[str, Any],
+    repository: StateRepository | None = None,
+) -> Path:
+    """Persist generated history through the app repository while preserving profile data."""
+    if repository is None:
+        repository = StateRepository()
+
+    records = history.get("records")
+    if not isinstance(records, dict):
+        raise ValueError("Generated history must include a records mapping.")
+
+    state = repository.load()
+    state["schema_version"] = history.get("schema_version", state.get("schema_version", 1))
+    state["records"] = records
+    repository.save(state)
+    return repository.paths.history_file
+
+
 def main() -> None:
     today = date.today()
     start = date(today.year, 1, 1)
@@ -549,7 +568,7 @@ def main() -> None:
         rng=random.Random(),
     )
 
-    history_path.write_text(json.dumps(history, ensure_ascii=False, indent=2), encoding="utf-8")
+    saved_path = save_generated_history(history)
     print(
         "Generated history: "
         f"{len(history['records']['voice'])} voice, "
@@ -562,7 +581,7 @@ def main() -> None:
         f"{len(history['records']['wellbeing_logs'])} wellbeing, "
         f"{len(history['records']['milestones'])} milestones"
     )
-    print(f"Saved to {history_path}")
+    print(f"Saved to {saved_path}")
 
 
 if __name__ == "__main__":
