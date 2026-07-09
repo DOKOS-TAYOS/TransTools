@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Raised the build-system minimum to `setuptools>=83.0.0` after validating the open Dependabot update locally.
+
+### Not Changed
+
+- Kept the NumPy minimum at `>=2.4.5` for now because the current `librosa -> numba 0.66.0` chain still requires `numpy<2.5`, so the open Dependabot NumPy PR would introduce a resolver conflict.
+
 ## [0.2.1] - 2026-05-17
 
 ### Added
