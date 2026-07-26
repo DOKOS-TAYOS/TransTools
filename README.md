@@ -321,8 +321,9 @@ Conviene dejarlo claro:
 
 ## Licencias
 
-- Proyecto: MIT ([LICENSE](LICENSE))
+- Proyecto: MIT ([LICENSE](LICENSE)); avisos y provenance: [NOTICE](NOTICE)
 - Dependencias de terceros: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md)
+- Citacion (opcional): [CITATION.cff](CITATION.cff)
 
 ## Nota importante
 
