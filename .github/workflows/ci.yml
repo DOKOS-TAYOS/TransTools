@@ -2,13 +2,7 @@ name: CI
 
 on:
   push:
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
   pull_request:
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
 
 permissions:
   contents: read
@@ -66,3 +60,36 @@ jobs:
 
       - name: Pytest
         run: pytest -q
+
+  required-pr-ci:
+    name: required-pr-ci
+    if: ${{ always() }}
+    needs:
+      - dependency-review
+      - test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate required jobs
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DEPENDENCY_REVIEW_RESULT: ${{ needs.dependency-review.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+        run: |
+          set -euo pipefail
+
+          echo "dependency-review=$DEPENDENCY_REVIEW_RESULT"
+          echo "test=$TEST_RESULT"
+
+          if [[ "$TEST_RESULT" != "success" ]]; then
+            echo "The test matrix did not complete successfully."
+            exit 1
+          fi
+
+          if [[ "$EVENT_NAME" == "pull_request" && "$DEPENDENCY_REVIEW_RESULT" != "success" ]]; then
+            echo "Dependency review did not complete successfully."
+            exit 1
+          fi
+
+          echo "All required PR checks completed successfully."
