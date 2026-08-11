@@ -9,4 +9,4 @@ python-dotenv>=1.2.2
 pillow>=12.3.0
 tkcalendar>=1.6.1
 reportlab>=5.0.0
-cryptography>=49.0.0
+cryptography>=50.0.0
