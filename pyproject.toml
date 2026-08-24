@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "transtools"
-version = "0.2.1"
+version = "0.2.2"
 description = "Desktop toolkit for transition support: voice, medication, habits and reports"
 readme = "README.md"
 license = {text = "MIT"}
@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["voice", "tracking", "transition", "pitch", "audio", "gui", "tkinter"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 7 - Inactive",
     "Environment :: X11 Applications :: Tk",
     "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: MIT License",

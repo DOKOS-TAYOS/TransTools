@@ -4,6 +4,8 @@ TransTools es una aplicacion de escritorio hecha con Python y Tkinter para lleva
 
 La idea del proyecto es sencilla: que una persona pueda guardar informacion util para su proceso sin depender de una cuenta online, sin subir audios a servicios externos y sin tener que repartirse entre varias herramientas pequenas.
 
+> **Proyecto archivado.** La version 0.2.2 es la version final de TransTools. El repositorio se conserva como referencia y no recibira mantenimiento ni nuevas funcionalidades.
+
 ## Que es hoy la aplicacion
 
 TransTools esta orientada a uso personal y offline. Su intencion actual no es ser una plataforma clinica ni una red social, sino una herramienta local de apoyo y organizacion.
