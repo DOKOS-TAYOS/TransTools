@@ -7,10 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-08-24
+
 ### Changed
 
 - Raised the build-system minimum to `setuptools>=83.0.0` after validating the open Dependabot update locally.
+- Raised the `cryptography` minimum to `>=50.0.0` to avoid the known vulnerability in version 49.0.0.
 - The fake-history generator now saves through the app repository instead of writing `patient_history.json` directly, preserving existing profile data and reusing the normal atomic save path.
+- Marked the project as inactive: version 0.2.2 is the final maintained release and the repository is archived for future reference.
 
 ### Not Changed
 
