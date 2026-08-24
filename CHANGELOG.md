@@ -11,14 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Raised the build-system minimum to `setuptools>=83.0.0` after validating the open Dependabot update locally.
-- Raised the `cryptography` minimum to `>=50.0.0` to avoid the known vulnerability in version 49.0.0.
+- Raised the build-system minimum to `setuptools>=84.0.0`.
+- Updated runtime dependency minimums: `numpy>=2.5.2`, `matplotlib>=3.11.1`, `pandas>=3.0.5`, `sounddevice>=0.5.6`, `librosa>=1.0.0`, `python-dotenv>=1.2.3`, and `cryptography>=50.0.0`.
+- Updated development and CI tooling, including `ruff>=0.16.3`, `actions/setup-python@v7`, and the required pull-request status check.
 - The fake-history generator now saves through the app repository instead of writing `patient_history.json` directly, preserving existing profile data and reusing the normal atomic save path.
 - Marked the project as inactive: version 0.2.2 is the final maintained release and the repository is archived for future reference.
-
-### Not Changed
-
-- Kept the NumPy minimum at `>=2.4.5` for now because the current `librosa -> numba 0.66.0` chain still requires `numpy<2.5`, so the open Dependabot NumPy PR would introduce a resolver conflict.
 
 ## [0.2.1] - 2026-05-17
 

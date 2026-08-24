@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=83.0.0"]
+requires = ["setuptools>=84.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -24,14 +24,14 @@ classifiers = [
     "Topic :: Multimedia :: Sound/Audio :: Analysis",
 ]
 dependencies = [
-    "numpy>=2.4.5",
-    "matplotlib>=3.11.0",
-    "pandas>=2.3",
-    "sounddevice>=0.4.6",
-    "librosa>=0.10.0",
+    "numpy>=2.5.2",
+    "matplotlib>=3.11.1",
+    "pandas>=3.0.5",
+    "sounddevice>=0.5.6",
+    "librosa>=1.0.0",
     "soundfile>=0.14.0",
     "openpyxl>=3.1.5",
-    "python-dotenv>=1.2.2",
+    "python-dotenv>=1.2.3",
     "pillow>=12.3.0",
     "tkcalendar>=1.6.1",
     "reportlab>=5.0.0",
@@ -43,7 +43,7 @@ dev = [
     "pip-audit>=2.10.1",
     "pyright>=1.1.411",
     "pytest>=9.1.1",
-    "ruff>=0.15.20",
+    "ruff>=0.16.3",
 ]
 
 [project.scripts]

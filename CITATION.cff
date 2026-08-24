@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: If you use this software, please cite it using these metadata.
+title: TransTools
+type: software
+authors:
+  - family-names: Mata Ali
+    given-names: Alejandro
+license: MIT
+version: 0.2.1
+repository-code: https://github.com/DOKOS-TAYOS/TransTools
+url: https://github.com/DOKOS-TAYOS/TransTools
+abstract: >-
+  Desktop toolkit for transition support: local voice analysis, medication
+  and visit logs, adaptive habits, companionship roadmap, and private
+  offline exports (Python / Tkinter).
+keywords:
+  - transition
+  - voice
+  - tracking
+  - tkinter
+  - privacy
+  - offline
